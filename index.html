@@ -1,0 +1,2203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PE Mechanical — Case Studies & Engineering Decisions</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    --bg: #f7f5f0;
+    --surface: #ffffff;
+    --surface2: #f0ede6;
+    --border: #ddd9cf;
+    --text: #1a1714;
+    --text2: #4a4540;
+    --text3: #7a7570;
+    --blue: #1e3a5f;
+    --blue-light: #e8f0fb;
+    --blue-mid: #3d6b9e;
+    --green: #1a4a2e;
+    --green-light: #e8f5ec;
+    --green-mid: #2e7d4f;
+    --yellow: #6b4e00;
+    --yellow-light: #fef9e7;
+    --yellow-mid: #d4a017;
+    --red: #7a1a1a;
+    --red-light: #fdecea;
+    --red-mid: #c0392b;
+    --purple: #3d1a6b;
+    --purple-light: #f0ebfb;
+    --purple-mid: #7c4dbd;
+    --accent: #b5472a;
+    --accent2: #2563a8;
+    --gold: #c4962a;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+    --radius: 10px;
+    --radius-lg: 16px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Source Serif 4', Georgia, serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1.7;
+  }
+
+  /* HEADER */
+  .site-header {
+    background: var(--blue);
+    color: white;
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.18);
+  }
+  .site-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1.3;
+  }
+  .header-badge {
+    background: var(--accent);
+    color: white;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+
+  /* SEGMENT BANNER */
+  .segment-banner {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2563a8 50%, #1a4a2e 100%);
+    color: white;
+    padding: 40px 48px 36px;
+    position: relative;
+    overflow: hidden;
+  }
+  .segment-banner::before {
+    content: '⚙';
+    position: absolute;
+    right: 60px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 8rem;
+    opacity: 0.06;
+    pointer-events: none;
+  }
+  .segment-banner .seg-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.7;
+    margin-bottom: 8px;
+  }
+  .segment-banner h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.1rem;
+    font-weight: 900;
+    margin-bottom: 10px;
+  }
+  .segment-banner p {
+    font-size: 1rem;
+    opacity: 0.85;
+    max-width: 640px;
+  }
+
+  /* FILTER BAR */
+  .filter-bar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 32px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    position: sticky;
+    top: 64px;
+    z-index: 90;
+  }
+  .filter-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    margin-right: 4px;
+  }
+  .filter-btn {
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+    color: var(--text2);
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-family: 'Source Serif 4', serif;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .filter-btn:hover { border-color: var(--blue-mid); color: var(--blue); }
+  .filter-btn.active {
+    background: var(--blue);
+    color: white;
+    border-color: var(--blue);
+  }
+  .case-count {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--text3);
+  }
+
+  /* MAIN */
+  .main {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 36px 24px 80px;
+  }
+
+  /* CASE CARD */
+  .case-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 28px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+  }
+  .case-card:hover { box-shadow: var(--shadow-lg); }
+
+  .case-header {
+    padding: 22px 28px 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    user-select: none;
+    position: relative;
+  }
+  .case-number {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: var(--border);
+    line-height: 1;
+    min-width: 48px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .case-meta {
+    flex: 1;
+  }
+  .case-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 12px;
+    font-weight: 600;
+  }
+  .tag-ht { background: var(--blue-light); color: var(--blue); }
+  .tag-fail { background: var(--red-light); color: var(--red); }
+  .tag-mat { background: var(--green-light); color: var(--green); }
+  .tag-grain { background: var(--yellow-light); color: var(--yellow); }
+  .tag-emb { background: var(--purple-light); color: var(--purple); }
+  .tag-hard { background: #fef0e8; color: #7a3500; }
+
+  .case-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.18rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .case-summary {
+    font-size: 0.9rem;
+    color: var(--text2);
+    line-height: 1.55;
+  }
+  .case-chevron {
+    font-size: 1.1rem;
+    color: var(--text3);
+    transition: transform 0.25s;
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+  .case-card.open .case-chevron { transform: rotate(180deg); }
+
+  .case-body { display: none; }
+  .case-card.open .case-body { display: block; }
+
+  .case-body-inner {
+    padding: 0 28px 28px;
+    border-top: 1px solid var(--border);
+    padding-top: 24px;
+  }
+
+  /* SCENARIO BOX */
+  .scenario-box {
+    background: var(--blue-light);
+    border-left: 4px solid var(--blue-mid);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 18px 20px;
+    margin-bottom: 20px;
+  }
+  .scenario-box .box-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--blue-mid);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  .scenario-box p { font-size: 0.93rem; color: var(--blue); line-height: 1.6; }
+
+  /* CLUES */
+  .clues-box {
+    background: var(--yellow-light);
+    border: 1px solid #e8d080;
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-bottom: 20px;
+  }
+  .clues-box .box-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--yellow-mid);
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .clue-list { list-style: none; padding: 0; }
+  .clue-list li {
+    font-size: 0.88rem;
+    color: var(--yellow);
+    padding: 3px 0 3px 20px;
+    position: relative;
+    line-height: 1.5;
+  }
+  .clue-list li::before {
+    content: '▸';
+    position: absolute;
+    left: 4px;
+    color: var(--yellow-mid);
+  }
+
+  /* QUESTION SECTION */
+  .question-section { margin-bottom: 20px; }
+  .question-text {
+    background: var(--surface2);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 14px;
+    border-left: 3px solid var(--accent2);
+  }
+
+  /* ANSWER OPTIONS */
+  .options-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .option-btn {
+    width: 100%;
+    text-align: left;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-family: 'Source Serif 4', serif;
+    font-size: 0.9rem;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.18s;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    line-height: 1.5;
+  }
+  .option-btn:hover:not(:disabled) {
+    border-color: var(--blue-mid);
+    background: var(--blue-light);
+  }
+  .option-btn .opt-letter {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 700;
+    background: var(--border);
+    color: var(--text2);
+    padding: 1px 7px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    transition: all 0.18s;
+  }
+  .option-btn.correct {
+    background: var(--green-light);
+    border-color: var(--green-mid);
+    color: var(--green);
+  }
+  .option-btn.correct .opt-letter { background: var(--green-mid); color: white; }
+  .option-btn.wrong {
+    background: var(--red-light);
+    border-color: var(--red-mid);
+    color: var(--red);
+  }
+  .option-btn.wrong .opt-letter { background: var(--red-mid); color: white; }
+  .option-btn:disabled { cursor: default; }
+
+  /* REVEAL PANEL */
+  .reveal-panel {
+    display: none;
+    margin-top: 20px;
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+  }
+  .reveal-panel.visible { display: block; }
+
+  .rationale-block {
+    background: var(--green-light);
+    border-left: 4px solid var(--green-mid);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+  }
+  .rationale-block .box-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--green-mid);
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .rationale-block p { font-size: 0.9rem; color: var(--green); line-height: 1.65; }
+
+  .distractor-block {
+    background: var(--red-light);
+    border-left: 4px solid var(--red-mid);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+  }
+  .distractor-block .box-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--red-mid);
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .distractor-block p, .distractor-block ul { font-size: 0.88rem; color: var(--red); line-height: 1.6; }
+  .distractor-block ul { padding-left: 18px; }
+  .distractor-block li { margin-bottom: 4px; }
+
+  .key-clue-block {
+    background: var(--yellow-light);
+    border: 1px solid #e8d080;
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .key-clue-icon { font-size: 1.4rem; flex-shrink: 0; }
+  .key-clue-block .kc-text { font-size: 0.88rem; color: var(--yellow); line-height: 1.6; }
+  .key-clue-block .kc-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--yellow-mid);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .concept-chain {
+    background: var(--blue-light);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    font-size: 0.88rem;
+    color: var(--blue);
+  }
+  .concept-chain .box-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--blue-mid);
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .chain-flow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .chain-step {
+    background: var(--blue-mid);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+  .chain-arrow { color: var(--blue-mid); font-size: 1rem; }
+
+  .designers-lens {
+    background: var(--purple-light);
+    border-left: 4px solid var(--purple-mid);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+  }
+  .designers-lens .box-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--purple-mid);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  .designers-lens p { font-size: 0.88rem; color: var(--purple); line-height: 1.6; }
+
+  .trap-alert {
+    background: #fff3e0;
+    border: 1.5px solid #f0a040;
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .trap-icon { font-size: 1.2rem; flex-shrink: 0; }
+  .trap-alert .ta-text { font-size: 0.87rem; color: #6b3800; line-height: 1.55; }
+  .trap-alert .ta-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #c07000;
+    font-weight: 700;
+    margin-bottom: 3px;
+  }
+
+  .think-next {
+    background: var(--surface2);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-size: 0.87rem;
+    color: var(--text2);
+    line-height: 1.6;
+    border-left: 3px solid var(--accent);
+  }
+  .think-next .tn-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  /* SCORE TRACKER */
+  .score-tracker {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--blue);
+    color: white;
+    border-radius: var(--radius-lg);
+    padding: 14px 20px;
+    min-width: 170px;
+    box-shadow: var(--shadow-lg);
+    z-index: 200;
+  }
+  .score-tracker .st-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    opacity: 0.7;
+    margin-bottom: 4px;
+  }
+  .score-tracker .st-score {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+  .score-tracker .st-bar {
+    height: 4px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+  }
+  .score-tracker .st-fill {
+    height: 100%;
+    background: #5cc88a;
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+  .score-tracker .st-sub {
+    font-size: 0.75rem;
+    opacity: 0.65;
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.55rem;
+    font-weight: 900;
+    color: var(--text);
+    margin-bottom: 6px;
+    margin-top: 36px;
+  }
+  .section-subtitle {
+    font-size: 0.92rem;
+    color: var(--text3);
+    margin-bottom: 24px;
+  }
+
+  /* EXPAND ALL BTN */
+  .controls-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+  }
+  .ctrl-btn {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 7px 16px;
+    font-family: 'Source Serif 4', serif;
+    font-size: 0.85rem;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .ctrl-btn:hover { background: var(--blue-light); border-color: var(--blue-mid); color: var(--blue); }
+
+  /* FOOTER */
+  footer {
+    text-align: center;
+    padding: 36px 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text3);
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+  }
+  footer strong { color: var(--text2); }
+
+  /* DIFFICULTY DOT */
+  .diff-dot {
+    display: inline-block;
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+  .diff-1 { background: var(--green-mid); }
+  .diff-2 { background: var(--yellow-mid); }
+  .diff-3 { background: var(--red-mid); }
+
+  @media (max-width: 640px) {
+    .segment-banner { padding: 28px 20px 24px; }
+    .segment-banner h2 { font-size: 1.5rem; }
+    .main { padding: 24px 14px 80px; }
+    .case-header { padding: 18px 18px 14px; gap: 12px; }
+    .case-body-inner { padding: 0 18px 22px; padding-top: 18px; }
+    .case-number { font-size: 1.6rem; min-width: 36px; }
+    .score-tracker { bottom: 14px; right: 14px; padding: 10px 14px; min-width: 140px; }
+    .filter-bar { padding: 10px 14px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header">
+  <h1>PE Mechanical — Heat Treatment & Material Failure Deep Mastery Lab</h1>
+  <span class="header-badge">SEGMENT 2 · CASE STUDIES</span>
+</header>
+
+<!-- BANNER -->
+<div class="segment-banner">
+  <div class="seg-label">Section 10 of 12 · Advanced Engineering Decisions</div>
+  <h2>Case Studies &amp; Engineering Decisions</h2>
+  <p>Twenty realistic, PE-style scenarios. Each trains you to trace the chain: <em>process → microstructure → property → failure mode → best decision</em>. Read the clues, commit to an answer, then study the rationale.</p>
+</div>
+
+<!-- FILTER BAR -->
+<div class="filter-bar">
+  <span class="filter-label">Filter:</span>
+  <button class="filter-btn active" data-filter="all">All Cases</button>
+  <button class="filter-btn" data-filter="ht">Heat Treatment</button>
+  <button class="filter-btn" data-filter="fail">Failure Analysis</button>
+  <button class="filter-btn" data-filter="emb">Embrittlement</button>
+  <button class="filter-btn" data-filter="grain">Grain/Toughness</button>
+  <button class="filter-btn" data-filter="hard">Hardenability</button>
+  <span class="case-count" id="caseCount">Showing 20 cases</span>
+</div>
+
+<!-- MAIN -->
+<main class="main">
+
+  <div class="controls-row">
+    <button class="ctrl-btn" onclick="expandAll()">▼ Expand All</button>
+    <button class="ctrl-btn" onclick="collapseAll()">▲ Collapse All</button>
+    <button class="ctrl-btn" onclick="showUnanswered()">○ Show Unanswered</button>
+    <button class="ctrl-btn" onclick="showWrong()">✗ Review Wrong</button>
+  </div>
+
+  <div id="casesContainer">
+
+  <!-- ========== CASE 1 ========== -->
+  <article class="case-card" data-category="ht hard" id="case1">
+    <div class="case-header" onclick="toggleCase('case1')">
+      <div class="case-number">01</div>
+      <div class="case-meta">
+        <div class="case-tags">
+          <span class="tag tag-ht">Heat Treatment</span>
+          <span class="tag tag-hard">Hardenability</span>
+          <span class="diff-dot diff-2"></span><span style="font-size:0.78rem;color:var(--text3)">Intermediate</span>
+        </div>
+        <div class="case-title">Gear: Hard Case, Tough Core</div>
+        <div class="case-summary">A transmission gear must resist surface wear from contact stress while absorbing shock loads without fracturing the core. Standard through-hardening has caused core brittleness. The material is AISI 8620 low-alloy steel.</div>
+      </div>
+      <div class="case-chevron">▼</div>
+    </div>
+    <div class="case-body">
+      <div class="case-body-inner">
+        <div class="scenario-box">
+          <div class="box-label">Scenario</div>
+          <p>An automotive transmission gear manufactured from AISI 8620 is failing in service. Through-hardened gears (59 HRC throughout) fracture under shock loads. Engineers want high surface hardness (58–62 HRC) for wear resistance but a tough core (~35 HRC) to handle impact. The gear is medium-section (~25 mm face width).</p>
+        </div>
+        <div class="clues-box">
+          <div class="box-label">Engineering Clues</div>
+          <ul class="clue-list">
+            <li>Fracture is brittle, originating in the core, not the surface</li>
+            <li>Surface hardness was satisfactory before failure</li>
+            <li>8620 is a low-carbon (~0.20% C) alloy steel — carbon too low for direct high hardness</li>
+            <li>Design objective explicitly requires a hardness gradient</li>
+            <li>Production volume is high — process must be repeatable and cost-effective</li>
+          </ul>
+        </div>
+        <div class="question-section">
+          <div class="question-text">Which single processing route best achieves the required hardness gradient while preserving a tough, ductile core in AISI 8620 steel?</div>
+          <ul class="options-list" id="q1-opts">
+            <li><button class="option-btn" data-q="q1" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">A</span>Through-harden at 870°C, quench in water, temper at 200°C</button></li>
+            <li><button class="option-btn" data-q="q1" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">B</span>Normalize, then induction harden the tooth flanks only</button></li>
+            <li><button class="option-btn" data-q="q1" data-correct="true" onclick="selectOption(this)"><span class="opt-letter">C</span>Carburize at 920°C, quench, then temper at low temperature (~170°C)</button></li>
+            <li><button class="option-btn" data-q="q1" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">D</span>Austempering to achieve bainitic structure throughout</button></li>
+          </ul>
+        </div>
+        <div class="reveal-panel" id="q1-reveal">
+          <div class="rationale-block">
+            <div class="box-label">Correct Answer — C: Carburizing + Quench + Low-Temp Temper</div>
+            <p>Carburizing diffuses carbon into the surface layer (0.8–1.2% C) of the low-carbon 8620 base. On quenching, the high-carbon case transforms to high-hardness martensite (58–62 HRC) while the low-carbon core, which lacks sufficient carbon to form hard martensite, retains a relatively tough, lower-hardness structure (~35 HRC). Low-temperature tempering relieves quench stresses in the case without substantially reducing surface hardness. This is the textbook process for gears, cams, and drive components requiring case hardness + core toughness.</p>
+          </div>
+          <div class="distractor-block">
+            <div class="box-label">Why the Distractors Fail</div>
+            <ul>
+              <li><strong>A:</strong> Through-hardening with water quench would re-create the original problem — near-uniform high hardness throughout — causing brittle core fracture. Also risks quench cracking.</li>
+              <li><strong>B:</strong> Induction hardening requires sufficient bulk carbon to harden; 8620's 0.20% C is inadequate. Also, induction hardening depth is shallow and less repeatable for complex gear geometry.</li>
+              <li><strong>D:</strong> Austempering produces bainite throughout — a uniform structure. It cannot create a hardness gradient. Bainite toughness is good but surface hardness (~50 HRC max) won't meet the 58–62 HRC wear requirement.</li>
+            </ul>
+          </div>
+          <div class="key-clue-block">
+            <span class="key-clue-icon">🔑</span>
+            <div>
+              <div class="kc-label">Key Clue</div>
+              <div class="kc-text">The base carbon content of 0.20% is the master clue. Any process that relies on through-hardening the existing carbon fails on this steel. The only route to high surface hardness is to <em>increase surface carbon first</em> — that points exclusively to carburizing (or carbonitriding), not induction or through-hardening.</div>
+            </div>
+          </div>
+          <div class="concept-chain">
+            <div class="box-label">Concept Chain</div>
+            <div class="chain-flow">
+              <span class="chain-step">Low C core (8620)</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Carburize surface</span><span class="chain-arrow">→</span>
+              <span class="chain-step">High-C case + low-C core</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Quench → martensite case + tough core</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Low temper → stress relief</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Wear resistance + impact toughness</span>
+            </div>
+          </div>
+          <div class="designers-lens">
+            <div class="box-label">Designer's Lens — How This Question Was Built</div>
+            <p>The test writer gave you a plausible-sounding distractor (induction hardening) that works for medium-carbon steels but not low-carbon steels. The material specification (8620, ~0.20% C) is the embedded key. Many students default to "surface hardening = induction" and miss that induction hardening works by rapid austenitizing and self-quenching — useless if the bulk carbon can't form hard martensite. Knowing material suitability conditions for each surface treatment is what separates PE-level answers from technician-level guesses.</p>
+          </div>
+          <div class="trap-alert">
+            <span class="trap-icon">⚠️</span>
+            <div>
+              <div class="ta-label">PE Trap Alert</div>
+              <div class="ta-text">Induction hardening is a trap whenever base carbon is low (&lt;0.35–0.40% C). It cannot import carbon — it only hardens what is there. Always check the carbon content before selecting a surface hardening method.</div>
+            </div>
+          </div>
+          <div class="think-next">
+            <div class="tn-label">How to Think Next Time</div>
+            The moment you see a low-carbon steel + "high surface hardness needed" → the answer lives in carburizing or carbonitriding. Check the carbon; choose the process.
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- ========== CASE 2 ========== -->
+  <article class="case-card" data-category="ht hard" id="case2">
+    <div class="case-header" onclick="toggleCase('case2')">
+      <div class="case-number">02</div>
+      <div class="case-meta">
+        <div class="case-tags">
+          <span class="tag tag-ht">Heat Treatment</span>
+          <span class="tag tag-hard">Hardenability</span>
+          <span class="diff-dot diff-2"></span><span style="font-size:0.78rem;color:var(--text3)">Intermediate</span>
+        </div>
+        <div class="case-title">Thick Section — Hard Exterior, Soft Core</div>
+        <div class="case-summary">A 100 mm diameter plain-carbon steel shaft (1040) is quenched in water. The surface reaches the required hardness, but the core is found to be significantly softer. The engineer suspects hardenability, not quench severity, is the root cause.</div>
+      </div>
+      <div class="case-chevron">▼</div>
+    </div>
+    <div class="case-body">
+      <div class="case-body-inner">
+        <div class="scenario-box">
+          <div class="box-label">Scenario</div>
+          <p>A designer specifies AISI 1040 steel (0.40% C, no significant alloy additions) for a 100 mm diameter shaft requiring 45 HRC throughout. After water quenching and tempering at 200°C, surface hardness is 52 HRC but core hardness is only 28 HRC. Switching to a more severe quench (brine) raises core hardness slightly to 31 HRC but also introduces surface cracks.</p>
+        </div>
+        <div class="clues-box">
+          <div class="box-label">Engineering Clues</div>
+          <ul class="clue-list">
+            <li>Water quench satisfies surface but not core — soft core is reproducible across multiple parts</li>
+            <li>Brine quench raises core hardness only marginally but introduces cracking</li>
+            <li>1040 has no alloy additions to delay transformation at the core</li>
+            <li>100 mm section is large; cooling rate at core is inherently slow</li>
+            <li>A colleague suggests switching to 4140 steel with the same quench</li>
+          </ul>
+        </div>
+        <div class="question-section">
+          <div class="question-text">What is the most accurate diagnosis and best corrective action?</div>
+          <ul class="options-list" id="q2-opts">
+            <li><button class="option-btn" data-q="q2" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">A</span>Quench severity is insufficient; switch to agitated brine quench</button></li>
+            <li><button class="option-btn" data-q="q2" data-correct="true" onclick="selectOption(this)"><span class="opt-letter">B</span>The steel has inadequate hardenability for this section size; switch to an alloy steel such as 4140</button></li>
+            <li><button class="option-btn" data-q="q2" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">C</span>Increase austenitizing temperature to dissolve more carbides</button></li>
+            <li><button class="option-btn" data-q="q2" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">D</span>Use martempering to equalize temperature across the section before transformation</button></li>
+          </ul>
+        </div>
+        <div class="reveal-panel" id="q2-reveal">
+          <div class="rationale-block">
+            <div class="box-label">Correct Answer — B: Inadequate Hardenability → Switch to 4140</div>
+            <p>Hardenability is the ability of steel to be hardened throughout its cross-section. Plain-carbon steels like 1040 have poor hardenability because austenite transforms to pearlite or bainite rapidly — the TTT nose is close to the y-axis. In a 100 mm section, the core cooling rate during water quench is insufficient to bypass this nose. The result is a soft pearlitic/bainitic core regardless of quench severity. Alloy additions (Cr, Mo in 4140) shift the TTT nose far to the right, allowing even slow-cooling cores to form martensite. This is a hardenability problem, not a quench severity problem.</p>
+          </div>
+          <div class="distractor-block">
+            <div class="box-label">Why the Distractors Fail</div>
+            <ul>
+              <li><strong>A:</strong> The brine trial already showed that increasing quench severity gives only 3 HRC gain in the core but causes surface cracking. This is the signature of a hardenability-limited problem — not a quench-limited one. More severe quench cannot overcome diffusion kinetics at the core.</li>
+              <li><strong>C:</strong> Higher austenitizing temperature dissolves more carbides, slightly improving hardenability at the margin. However, for a 100 mm plain-carbon steel section, this effect is inadequate — and overheating causes grain coarsening, which can reduce toughness.</li>
+              <li><strong>D:</strong> Martempering reduces distortion and thermal shock but does NOT improve core hardenability. It delays martensite start until the section is temperature-equalized, but if the core lacks hardenability, it will still transform to softer products during the hold.</li>
+            </ul>
+          </div>
+          <div class="key-clue-block">
+            <span class="key-clue-icon">🔑</span>
+            <div>
+              <div class="kc-label">Key Clue</div>
+              <div class="kc-text">The brine trial is the diagnostic key. When increasing quench severity barely moves the core hardness (3 HRC gain) but causes cracking, you have hit the hardenability ceiling of the alloy. Switching quench media cannot solve a metallurgical (hardenability) limitation.</div>
+            </div>
+          </div>
+          <div class="concept-chain">
+            <div class="box-label">Concept Chain</div>
+            <div class="chain-flow">
+              <span class="chain-step">Plain C steel (1040)</span><span class="chain-arrow">→</span>
+              <span class="chain-step">TTT nose = close (fast transformation)</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Core cools slowly</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Nose intersected → pearlite/bainite</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Soft core regardless of quench</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Need alloy steel (right-shifted TTT)</span>
+            </div>
+          </div>
+          <div class="designers-lens">
+            <div class="box-label">Designer's Lens</div>
+            <p>This case is constructed to test whether the student distinguishes <em>hardenability</em> (material property) from <em>quench severity</em> (process variable). These are commonly conflated. The problem embedded a real-world engineer's mistake (trying brine) so the student can use the outcome as diagnostic evidence. PE questions often hide the diagnosis inside a failed attempt — learn to read the "tried X but got this result" as a clue.</p>
+          </div>
+          <div class="trap-alert">
+            <span class="trap-icon">⚠️</span>
+            <div>
+              <div class="ta-label">PE Trap Alert</div>
+              <div class="ta-text">Hardness and hardenability are NOT the same. A steel can achieve full hardness on a thin section but fail to harden a thick section — same material, same quench. Hardenability is about section-size capability. Always check: is the steel hardenable at this cross-section?</div>
+            </div>
+          </div>
+          <div class="think-next">
+            <div class="tn-label">How to Think Next Time</div>
+            When surface is hard but core is soft, and more quench doesn't fix it → hardenability problem → need alloy additions or a different alloy steel.
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- ========== CASE 3 ========== -->
+  <article class="case-card" data-category="emb fail" id="case3">
+    <div class="case-header" onclick="toggleCase('case3')">
+      <div class="case-number">03</div>
+      <div class="case-meta">
+        <div class="case-tags">
+          <span class="tag tag-emb">Embrittlement</span>
+          <span class="tag tag-fail">Failure Analysis</span>
+          <span class="diff-dot diff-3"></span><span style="font-size:0.78rem;color:var(--text3)">Expert</span>
+        </div>
+        <div class="case-title">Plated Fastener Fails Days After Installation</div>
+        <div class="case-summary">High-strength bolt (Grade 12.9, ~1250 MPa UTS) is electroplated with cadmium for corrosion protection. The bolt is torqued to specification. Three days later the bolt fractures under static load well below its rated capacity. Fracture surface shows intergranular cracking.</div>
+      </div>
+      <div class="case-chevron">▼</div>
+    </div>
+    <div class="case-body">
+      <div class="case-body-inner">
+        <div class="scenario-box">
+          <div class="box-label">Scenario</div>
+          <p>A fleet of Grade 12.9 structural bolts was electroplated with cadmium for a marine application. The bolts were torqued to 85% proof load. Failures occurred 2–4 days after installation, all at approximately the thread root. Fracture surfaces revealed intergranular cracking with no macroscopic ductility (no necking, no shear lip). Bolt strength prior to installation had been verified at 1300 MPa. Service temperature was ambient (22°C).</p>
+        </div>
+        <div class="clues-box">
+          <div class="box-label">Engineering Clues</div>
+          <ul class="clue-list">
+            <li>Delayed failure (2–4 days) — not immediate after installation</li>
+            <li>Fracture well below rated strength</li>
+            <li>Intergranular crack morphology</li>
+            <li>No macroscopic plasticity</li>
+            <li>Electroplating preceded failure</li>
+            <li>High-strength steel (&gt;1000 MPa) — high susceptibility zone</li>
+            <li>Thread root = stress concentrator</li>
+          </ul>
+        </div>
+        <div class="question-section">
+          <div class="question-text">Which failure mechanism best explains these findings, and what is the primary mitigation?</div>
+          <ul class="options-list" id="q3-opts">
+            <li><button class="option-btn" data-q="q3" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">A</span>Stress corrosion cracking from chloride ions in the marine environment</button></li>
+            <li><button class="option-btn" data-q="q3" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">B</span>Temper embrittlement from improper tempering temperature range</button></li>
+            <li><button class="option-btn" data-q="q3" data-correct="true" onclick="selectOption(this)"><span class="opt-letter">C</span>Hydrogen embrittlement introduced during electroplating; mitigate by baking at 190–200°C within 4 hours of plating</button></li>
+            <li><button class="option-btn" data-q="q3" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">D</span>Fatigue crack growth from bolt preload cycling</button></li>
+          </ul>
+        </div>
+        <div class="reveal-panel" id="q3-reveal">
+          <div class="rationale-block">
+            <div class="box-label">Correct Answer — C: Hydrogen Embrittlement from Electroplating</div>
+            <p>Electroplating introduces atomic hydrogen into the steel through cathodic reactions at the steel surface. High-strength steels (&gt;1000 MPa, especially &gt;1200 MPa) are extremely susceptible because their high dislocation density and stress fields trap hydrogen at grain boundaries and defect sites. Hydrogen lowers the cohesive energy of grain boundaries, enabling intergranular brittle fracture at stresses far below the rated tensile strength. The delay (2–4 days) is classic — hydrogen diffuses to grain boundaries and stress-concentrated regions over hours to days before a critical concentration triggers crack initiation. Mitigation: bake immediately after plating (190–210°C for 4–24 hours) to drive hydrogen out before it reaches critical concentration. Baking must occur before hydrogen diffuses to critical sites.</p>
+          </div>
+          <div class="distractor-block">
+            <div class="box-label">Why the Distractors Fail</div>
+            <ul>
+              <li><strong>A:</strong> SCC from chlorides requires an aqueous corrosive environment in contact with the stressed part. The bolt is plated and has not been exposed to seawater yet — SCC requires sustained corrosive exposure, not pre-installation plating.</li>
+              <li><strong>B:</strong> Temper embrittlement occurs during tempering (450–565°C range) and produces intergranular fracture — plausible morphology but the timing (days after installation) is inconsistent with a prior processing event. Temper embrittlement is a before-service condition, not a time-delayed post-installation failure.</li>
+              <li><strong>D:</strong> Fatigue requires cyclic loading. Static torqued bolts experience sustained load, not cycling. No macroscopic ratchet marks or beach marks are noted on the fracture surface.</li>
+            </ul>
+          </div>
+          <div class="key-clue-block">
+            <span class="key-clue-icon">🔑</span>
+            <div>
+              <div class="kc-label">Key Clue</div>
+              <div class="kc-text">The combination of: (1) electroplating process, (2) delayed failure in hours to days, (3) intergranular fracture, (4) high-strength steel, (5) no macroscopic ductility — this constellation is <em>definitionally</em> hydrogen embrittlement. Each clue individually is suggestive; together they are conclusive.</div>
+            </div>
+          </div>
+          <div class="concept-chain">
+            <div class="box-label">Concept Chain</div>
+            <div class="chain-flow">
+              <span class="chain-step">Electroplating (H₂ evolved)</span><span class="chain-arrow">→</span>
+              <span class="chain-step">H absorbed into steel</span><span class="chain-arrow">→</span>
+              <span class="chain-step">H diffuses to grain boundaries + stress risers</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Cohesive strength ↓ at boundaries</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Intergranular brittle fracture below yield</span>
+            </div>
+          </div>
+          <div class="trap-alert">
+            <span class="trap-icon">⚠️</span>
+            <div>
+              <div class="ta-label">PE Trap Alert</div>
+              <div class="ta-text">Students often pick SCC because the application is "marine." But SCC requires <em>active corrosive exposure</em> during service. If the failure happens before the part enters the corrosive environment — or occurs in days under static indoor conditions post-installation — hydrogen embrittlement from processing (plating, pickling, welding, acid cleaning) is the primary suspect.</div>
+            </div>
+          </div>
+          <div class="designers-lens">
+            <div class="box-label">Designer's Lens</div>
+            <p>"Marine application" was seeded to make SCC tempting. The PE question writer wanted to test whether you recognize that SCC is an <em>in-service</em> mechanism requiring active environmental exposure, while hydrogen embrittlement is a <em>process-introduced</em> mechanism triggered before the part enters service. The timing clue (days) and the electroplating process are the discriminators.</p>
+          </div>
+          <div class="think-next">
+            <div class="tn-label">How to Think Next Time</div>
+            Delayed failure + electroplating + intergranular + high-strength steel = hydrogen embrittlement until proven otherwise. The fix is baking — immediately after plating.
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- ========== CASE 4 ========== -->
+  <article class="case-card" data-category="ht" id="case4">
+    <div class="case-header" onclick="toggleCase('case4')">
+      <div class="case-number">04</div>
+      <div class="case-meta">
+        <div class="case-tags">
+          <span class="tag tag-ht">Heat Treatment</span>
+          <span class="diff-dot diff-2"></span><span style="font-size:0.78rem;color:var(--text3)">Intermediate</span>
+        </div>
+        <div class="case-title">Shaft Warped After Quench</div>
+        <div class="case-summary">A long, slender alloy steel shaft (L/D ≈ 15) is water quenched after austenitizing. Significant warping makes the shaft unusable. The engineer must select a modified process that achieves the required hardness while minimizing distortion.</div>
+      </div>
+      <div class="case-chevron">▼</div>
+    </div>
+    <div class="case-body">
+      <div class="case-body-inner">
+        <div class="scenario-box">
+          <div class="box-label">Scenario</div>
+          <p>AISI 4340 alloy steel shafts (38 mm diameter × 580 mm long) are austenitized and water quenched to achieve 50+ HRC. Post-quench inspection shows warping of 2–3 mm over the shaft length. Straightening after heat treatment is rejected because it introduces residual stresses and risks cracking. The shaft must be within 0.15 mm TIR after heat treatment. Required final hardness: 48–52 HRC.</p>
+        </div>
+        <div class="clues-box">
+          <div class="box-label">Engineering Clues</div>
+          <ul class="clue-list">
+            <li>4340 has excellent hardenability — can achieve full martensite even with slower quenches</li>
+            <li>Distortion is caused by thermal gradients during quenching and volumetric expansion during martensite transformation</li>
+            <li>The part is long and slender — asymmetric cooling creates bending moments</li>
+            <li>Hardness specification (48–52 HRC) requires martensitic transformation</li>
+            <li>Straightening post-quench introduces cracking risk in martensitic structure</li>
+          </ul>
+        </div>
+        <div class="question-section">
+          <div class="question-text">Which modified heat treatment process is most appropriate to minimize distortion while achieving the required hardness?</div>
+          <ul class="options-list" id="q4-opts">
+            <li><button class="option-btn" data-q="q4" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">A</span>Switch to oil quench — slower cooling rate reduces thermal gradient</button></li>
+            <li><button class="option-btn" data-q="q4" data-correct="true" onclick="selectOption(this)"><span class="opt-letter">B</span>Use martempering (marquenching) — interrupt quench at just above Ms, equalize, then air cool</button></li>
+            <li><button class="option-btn" data-q="q4" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">C</span>Use austempering — hold in salt bath above Ms until bainite transformation is complete</button></li>
+            <li><button class="option-btn" data-q="q4" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">D</span>Normalize before quenching to refine grain and reduce distortion</button></li>
+          </ul>
+        </div>
+        <div class="reveal-panel" id="q4-reveal">
+          <div class="rationale-block">
+            <div class="box-label">Correct Answer — B: Martempering (Marquenching)</div>
+            <p>Martempering involves quenching into a salt bath held just above the martensite start (Ms) temperature (~200–250°C for 4340), holding until the surface and core equalize in temperature, then air-cooling slowly through the martensite transformation range. Because the entire section transforms to martensite nearly simultaneously (rather than outside-in during a water quench), the volumetric expansion from the martensite transformation is uniform across the section — dramatically reducing residual stresses and distortion. For high-hardenability alloy steels like 4340, the cooling rate during the initial fast quench to Ms is still sufficient to bypass the pearlite/bainite nose, so full martensite is achievable despite the interrupted process.</p>
+          </div>
+          <div class="distractor-block">
+            <div class="box-label">Why the Distractors Fail</div>
+            <ul>
+              <li><strong>A:</strong> Oil quench reduces distortion compared to water — this is a valid improvement for modestly hardenable steels. But the problem specifies warping is still 2–3 mm after water quench, and oil quench alone may not achieve the TIR tolerance of 0.15 mm for this L/D ratio. Martempering specifically addresses the differential transformation timing problem, which oil quench does not.</li>
+              <li><strong>C:</strong> Austempering produces bainite, not martensite. The hardness from lower bainite caps at ~52–55 HRC max; for 4340 at the upper end of the specification, this might be borderline — but more importantly, the design requires martensite for dimensional predictability and the hardness specification explicitly calls for the 48–52 HRC range that martensite delivers. Austempering also requires very long hold times for thick sections.</li>
+              <li><strong>D:</strong> Normalizing refines grain size and improves toughness but has no meaningful effect on quench distortion. Distortion is caused by temperature gradients and transformation timing during the quench — not by prior grain size.</li>
+            </ul>
+          </div>
+          <div class="key-clue-block">
+            <span class="key-clue-icon">🔑</span>
+            <div>
+              <div class="kc-label">Key Clue</div>
+              <div class="kc-text">The clue is: distortion is the problem + 4340's high hardenability + martensite is still required. When you need martensite AND minimal distortion AND the steel is highly hardenable → martempering is purpose-built for this scenario. Austempering would also reduce distortion but sacrifices martensite — which this design needs.</div>
+            </div>
+          </div>
+          <div class="concept-chain">
+            <div class="box-label">Concept Chain</div>
+            <div class="chain-flow">
+              <span class="chain-step">Asymmetric cooling</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Outside transforms first</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Differential expansion/contraction</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Distortion + residual stress</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Martempering equalizes before transformation</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Simultaneous transformation → low distortion</span>
+            </div>
+          </div>
+          <div class="trap-alert">
+            <span class="trap-icon">⚠️</span>
+            <div>
+              <div class="ta-label">PE Trap Alert</div>
+              <div class="ta-text">Austempering and martempering are both "interrupted quench" processes, and students frequently confuse them. Remember: martempering → interrupted just above Ms → result is <strong>martensite</strong>. Austempering → interrupted WELL above Ms → hold for complete bainite transformation → result is <strong>bainite</strong>.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- ========== CASE 5 ========== -->
+  <article class="case-card" data-category="fail grain" id="case5">
+    <div class="case-header" onclick="toggleCase('case5')">
+      <div class="case-number">05</div>
+      <div class="case-meta">
+        <div class="case-tags">
+          <span class="tag tag-fail">Failure Analysis</span>
+          <span class="tag tag-grain">Grain/Toughness</span>
+          <span class="diff-dot diff-3"></span><span style="font-size:0.78rem;color:var(--text3)">Expert</span>
+        </div>
+        <div class="case-title">Weld HAZ Becomes Brittle</div>
+        <div class="case-summary">A structural steel weld joint fails by brittle fracture in the heat-affected zone (HAZ) during cold-weather service. The base metal is A36 steel. The weld appeared sound on visual inspection. Fracture surface shows a coarse, crystalline appearance.</div>
+      </div>
+      <div class="case-chevron">▼</div>
+    </div>
+    <div class="case-body">
+      <div class="case-body-inner">
+        <div class="scenario-box">
+          <div class="box-label">Scenario</div>
+          <p>A structural weld joint on outdoor equipment fails in brittle fracture at −18°C (0°F). The base metal is A36 (Fy = 250 MPa). The HAZ fracture surface is coarse and crystalline, contrasting with the fine-grained appearance of remote base metal fracture. Applied stress at failure was 60% of yield. No corrosion was found. The welding procedure used high heat input, multi-pass welding without pre-heat or interpass temperature control.</p>
+        </div>
+        <div class="clues-box">
+          <div class="box-label">Engineering Clues</div>
+          <ul class="clue-list">
+            <li>Fracture in HAZ — not weld metal, not parent metal</li>
+            <li>Coarse crystalline fracture surface in HAZ</li>
+            <li>Fine-grained fracture in base metal away from weld</li>
+            <li>High heat input welding → HAZ experienced high peak temperatures near fusion line</li>
+            <li>Cold service (−18°C) — near or below the DBTT for coarsened steel</li>
+            <li>No pre-heat or interpass control specified</li>
+          </ul>
+        </div>
+        <div class="question-section">
+          <div class="question-text">Which microstructural mechanism best explains HAZ brittleness in this weld, and which procedural change most directly prevents it?</div>
+          <ul class="options-list" id="q5-opts">
+            <li><button class="option-btn" data-q="q5" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">A</span>Martensite formed in HAZ due to rapid cooling; use post-weld heat treatment (PWHT) to temper martensite</button></li>
+            <li><button class="option-btn" data-q="q5" data-correct="true" onclick="selectOption(this)"><span class="opt-letter">B</span>Grain coarsening in HAZ due to high peak temperature; reduce heat input and/or use normalizing PWHT to refine grains</button></li>
+            <li><button class="option-btn" data-q="q5" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">C</span>Hydrogen embrittlement from weld moisture; use pre-dried electrodes and preheat</button></li>
+            <li><button class="option-btn" data-q="q5" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">D</span>Stress corrosion cracking from residual weld stresses in the cold environment</button></li>
+          </ul>
+        </div>
+        <div class="reveal-panel" id="q5-reveal">
+          <div class="rationale-block">
+            <div class="box-label">Correct Answer — B: HAZ Grain Coarsening</div>
+            <p>The region nearest the fusion line in a weld HAZ experiences peak temperatures of 1200–1400°C — well into the austenite grain growth regime (above ~1100°C). High heat input maximizes the time at temperature, producing severely coarse austenite grains. On cooling, these large prior austenite grains yield coarse transformed products (coarse ferrite + pearlite, or Widmanstätten structures in low-carbon steel). Coarse grain size: (1) raises the DBTT, (2) provides large cleavage facets for brittle crack propagation, and (3) reduces toughness dramatically. At −18°C service, the coarse-grained HAZ may be operating well below its DBTT while the fine-grained base metal remains above its own DBTT. The coarse crystalline fracture surface directly corresponds to large cleavage facets from coarse grains. Mitigation: control heat input to reduce grain growth; post-weld normalizing at ~900°C followed by air cooling refines grain structure.</p>
+          </div>
+          <div class="distractor-block">
+            <div class="box-label">Why the Distractors Fail</div>
+            <ul>
+              <li><strong>A:</strong> Martensite formation in A36 (low-carbon, no alloy additions) HAZ requires rapid quenching. High heat input welding cools slowly — actually <em>reducing</em> the likelihood of HAZ martensite in low-carbon steel. Martensite is more of a concern with high-carbon or alloy steels and fast cooling (thin sections, low heat input).</li>
+              <li><strong>C:</strong> Hydrogen embrittlement from welding is a real concern (cold cracking), especially in higher-strength or alloy steels with underbead cracks. However, hydrogen-induced cracking typically appears within hours post-weld and shows different crack morphology. The coarse-grained crystalline HAZ fracture at service temperature points to grain coarsening + low-temperature cleavage, not hydrogen cracking.</li>
+              <li><strong>D:</strong> SCC requires a specific corrosive environment (e.g., chlorides for stainless steel). Cold temperature alone with residual stress in structural steel does not constitute an SCC condition.</li>
+            </ul>
+          </div>
+          <div class="key-clue-block">
+            <span class="key-clue-icon">🔑</span>
+            <div>
+              <div class="kc-label">Key Clue</div>
+              <div class="kc-text">The contrast between the coarse crystalline HAZ fracture and the fine-grained base metal fracture is the diagnostic proof. This is a grain-size-driven toughness difference, spatially mapped onto the weld geometry. The high heat input is the causative process clue — it guarantees time at grain-coarsening temperatures near the fusion line.</div>
+            </div>
+          </div>
+          <div class="concept-chain">
+            <div class="box-label">Concept Chain</div>
+            <div class="chain-flow">
+              <span class="chain-step">High heat input welding</span><span class="chain-arrow">→</span>
+              <span class="chain-step">HAZ peak T &gt;1100°C</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Austenite grain coarsening</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Coarse transformed microstructure</span><span class="chain-arrow">→</span>
+              <span class="chain-step">DBTT raised above service T</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Brittle cleavage fracture at −18°C</span>
+            </div>
+          </div>
+          <div class="trap-alert">
+            <span class="trap-icon">⚠️</span>
+            <div>
+              <div class="ta-label">PE Trap Alert</div>
+              <div class="ta-text">High heat input is not always better. Slow cooling from high heat input reduces HAZ martensite risk in alloy steels, but simultaneously causes grain coarsening that raises the DBTT — potentially catastrophic in cold-service low-carbon structural steel. These effects pull in opposite directions and both must be managed.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- ========== CASE 6 ========== -->
+  <article class="case-card" data-category="fail" id="case6">
+    <div class="case-header" onclick="toggleCase('case6')">
+      <div class="case-number">06</div>
+      <div class="case-meta">
+        <div class="case-tags">
+          <span class="tag tag-fail">Failure Analysis</span>
+          <span class="diff-dot diff-3"></span><span style="font-size:0.78rem;color:var(--text3)">Expert</span>
+        </div>
+        <div class="case-title">High Hardness Achieved, Fatigue Life Poor</div>
+        <div class="case-summary">A carburized and quenched steel shaft achieves 60 HRC at the surface and passes static load tests, but fails in fatigue at 40% of the expected cycle life. The question is: what was missed in the process?</div>
+      </div>
+      <div class="case-chevron">▼</div>
+    </div>
+    <div class="case-body">
+      <div class="case-body-inner">
+        <div class="scenario-box">
+          <div class="box-label">Scenario</div>
+          <p>A carburized 8620 shaft achieves excellent surface hardness (60 HRC). Static tests pass. But rotating bending fatigue tests show failure at 10⁶ cycles against a design target of 2.5×10⁶ cycles. Failure origin is at the surface at a geometric transition (fillet). The surface shows no corrosion. Residual stress measurement reveals tensile residual stresses at the surface of ~+180 MPa.</p>
+        </div>
+        <div class="clues-box">
+          <div class="box-label">Engineering Clues</div>
+          <ul class="clue-list">
+            <li>Excellent hardness (60 HRC) — surface carbon and martensite confirmed</li>
+            <li>Failure at surface fillet — classic fatigue initiation site</li>
+            <li>Tensile residual stress at surface (+180 MPa) — this is the anomaly</li>
+            <li>Carburizing + quench normally produces compressive residual stresses in the case</li>
+            <li>Short fatigue life suggests either residual stress state, surface damage, or microstructure issue</li>
+          </ul>
+        </div>
+        <div class="question-section">
+          <div class="question-text">What most likely caused the poor fatigue performance despite adequate surface hardness, and which single corrective measure would most improve fatigue life?</div>
+          <ul class="options-list" id="q6-opts">
+            <li><button class="option-btn" data-q="q6" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">A</span>The case depth is insufficient; increase carburizing time</button></li>
+            <li><button class="option-btn" data-q="q6" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">B</span>The quench was too severe; switch to oil quench to reduce surface cracking</button></li>
+            <li><button class="option-btn" data-q="q6" data-correct="true" onclick="selectOption(this)"><span class="opt-letter">C</span>Post-carburizing machining or grinding introduced tensile residual stresses; shot-peen the surface to restore compressive stresses</button></li>
+            <li><button class="option-btn" data-q="q6" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">D</span>Increase tempering temperature to reduce brittleness of the case</button></li>
+          </ul>
+        </div>
+        <div class="reveal-panel" id="q6-reveal">
+          <div class="rationale-block">
+            <div class="box-label">Correct Answer — C: Tensile Residual Stresses → Shot Peen</div>
+            <p>Carburizing + quenching should produce compressive residual stresses in the high-carbon case because: the case transforms to martensite (with volumetric expansion) while constrained by the core, generating compression in the case. Tensile stresses at +180 MPa indicate this compressive state was destroyed — most likely by post-heat-treatment grinding or finish machining at the fillet. Abusive grinding introduces tensile residual stresses and thermal damage (grinding burn) at the very surface where fatigue initiates. Tensile surface residual stress directly adds to applied fatigue stress amplitude, drastically reducing fatigue life. Shot peening plastically deforms the surface and restores compressive residual stresses, closing surface cracks and dramatically extending fatigue life — even without changing the hardness or chemistry.</p>
+          </div>
+          <div class="distractor-block">
+            <div class="box-label">Why the Distractors Fail</div>
+            <ul>
+              <li><strong>A:</strong> Case depth affects fatigue life through the depth of the compressive zone. But if surface hardness (60 HRC) is confirmed, this specific failure at the surface at a stress concentrator with measured tensile residual stress points to the stress state, not insufficient case depth.</li>
+              <li><strong>B:</strong> Switching to oil quench would reduce severity — but the current problem is tensile residual stress, not quench cracks. A less severe quench would not fix the tensile stress introduced by post-process machining.</li>
+              <li><strong>D:</strong> Higher tempering reduces brittleness slightly but also reduces hardness — moving the surface hardness below the required 60 HRC and not addressing the root cause (tensile residual stress).</li>
+            </ul>
+          </div>
+          <div class="key-clue-block">
+            <span class="key-clue-icon">🔑</span>
+            <div>
+              <div class="kc-label">Key Clue</div>
+              <div class="kc-text">The measured tensile residual stress (+180 MPa) at the surface is the definitive clue. Carburized parts should have compressive case residual stresses. When this state is reversed, you are almost certainly looking at post-process mechanical damage (grinding, turning). The stress measurement tells the story directly.</div>
+            </div>
+          </div>
+          <div class="trap-alert">
+            <span class="trap-icon">⚠️</span>
+            <div>
+              <div class="ta-label">PE Trap Alert</div>
+              <div class="ta-text">Hardness alone does not guarantee fatigue performance. Fatigue life depends heavily on: residual stress state (compressive = good, tensile = bad), surface finish, stress concentrations, and microstructure. A part can be perfectly hard and still have terrible fatigue life if post-process operations introduced tensile stresses.</div>
+            </div>
+          </div>
+          <div class="designers-lens">
+            <div class="box-label">Designer's Lens</div>
+            <p>This case tests whether you know that fatigue is surface-dominated and residual-stress-sensitive. The question gives you the hardness as a successful data point (to remove hardness as the variable) and then plants the anomalous residual stress measurement as the key. Engineers who think "hardness = performance" miss this. PE-level reasoning requires connecting process sequence to final stress state.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- ========== CASE 7 ========== -->
+  <article class="case-card" data-category="emb" id="case7">
+    <div class="case-header" onclick="toggleCase('case7')">
+      <div class="case-number">07</div>
+      <div class="case-meta">
+        <div class="case-tags">
+          <span class="tag tag-emb">Embrittlement</span>
+          <span class="diff-dot diff-3"></span><span style="font-size:0.78rem;color:var(--text3)">Expert</span>
+        </div>
+        <div class="case-title">Stainless Component in Chloride Environment — Fine Branched Cracks</div>
+        <div class="case-summary">An austenitic stainless steel (304) pressure vessel used in a coastal chemical plant develops fine, branching cracks in a stressed region after 18 months of service. No gross corrosion or pitting is observed on most surfaces. Service temperature is 75°C.</div>
+      </div>
+      <div class="case-chevron">▼</div>
+    </div>
+    <div class="case-body">
+      <div class="case-body-inner">
+        <div class="scenario-box">
+          <div class="box-label">Scenario</div>
+          <p>304 SS pressure vessel (sensitized by improper post-weld heat treatment) shows fine, branching, intergranular cracks in a high-stress region exposed to 200 ppm chloride solution at 75°C. The cracks are tight, difficult to see without dye penetrant. Hardness is unchanged. There is no macroscopic plastic deformation. The vessel has been in continuous service under constant internal pressure.</p>
+        </div>
+        <div class="clues-box">
+          <div class="box-label">Engineering Clues</div>
+          <ul class="clue-list">
+            <li>Austenitic stainless steel — chloride-susceptible</li>
+            <li>Chloride environment (200 ppm) + elevated temperature (75°C) + sustained tensile stress</li>
+            <li>Fine, branching crack morphology — classic transgranular or mixed</li>
+            <li>Hardness unchanged — strength not degraded in bulk</li>
+            <li>Sensitization possible from improper PWHT — may be intergranular</li>
+            <li>Constant applied stress (pressure vessel) — no cycling needed</li>
+          </ul>
+        </div>
+        <div class="question-section">
+          <div class="question-text">Which mechanism is most responsible for these cracks, and which material change most effectively prevents recurrence?</div>
+          <ul class="options-list" id="q7-opts">
+            <li><button class="option-btn" data-q="q7" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">A</span>Hydrogen embrittlement from cathodic corrosion reactions in the chloride solution</button></li>
+            <li><button class="option-btn" data-q="q7" data-correct="true" onclick="selectOption(this)"><span class="opt-letter">B</span>Chloride stress corrosion cracking (Cl-SCC); switch to 316L or 2205 duplex stainless for better Cl resistance</button></li>
+            <li><button class="option-btn" data-q="q7" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">C</span>Intergranular corrosion from sensitization; solution anneal and quench to re-dissolve Cr carbides</button></li>
+            <li><button class="option-btn" data-q="q7" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">D</span>Pitting corrosion propagating to cracks under stress</button></li>
+          </ul>
+        </div>
+        <div class="reveal-panel" id="q7-reveal">
+          <div class="rationale-block">
+            <div class="box-label">Correct Answer — B: Chloride Stress Corrosion Cracking</div>
+            <p>Chloride SCC in austenitic stainless steels requires three simultaneous conditions: susceptible material (austenitic SS), tensile stress (sustained or residual), and chloride environment at elevated temperature (&gt;~50°C). All three are present here. Cl-SCC produces fine, branching, transgranular cracks — the hallmark morphology described. Hardness remains unchanged because the bulk microstructure is unaffected; only crack-tip electrochemical and mechanical processes are at work. The solution anneal would address sensitization (intergranular corrosion) but does NOT make 304 immune to Cl-SCC. The best prevention is material substitution: 316L (Mo addition improves Cl resistance), or better yet, 2205 duplex SS (far superior Cl-SCC resistance due to duplex microstructure and higher PRE number).</p>
+          </div>
+          <div class="distractor-block">
+            <div class="box-label">Why the Distractors Fail</div>
+            <ul>
+              <li><strong>A:</strong> Hydrogen embrittlement is less common in austenitic SS under these service conditions (it can occur, but requires high H activity). The branching crack morphology and chloride environment more specifically point to Cl-SCC. HE typically shows less branching and is more associated with cathodic protection environments or pickling.</li>
+              <li><strong>C:</strong> Sensitization causes intergranular corrosion (a different attack pattern — grain boundary dissolution, knife-line attack), not the fine branching transgranular cracks of Cl-SCC. Solution annealing would fix sensitization but would not prevent Cl-SCC, because the susceptibility to Cl-SCC is inherent to austenitic SS in chloride environments.</li>
+              <li><strong>D:</strong> Pitting alone doesn't produce branching cracks. Pitting corrosion produces discrete hemispherical pits. The fine branching crack network is specific to SCC crack morphology.</li>
+            </ul>
+          </div>
+          <div class="key-clue-block">
+            <span class="key-clue-icon">🔑</span>
+            <div>
+              <div class="kc-label">Key Clue</div>
+              <div class="kc-text">Fine + branching + austenitic SS + chloride + sustained stress + elevated temperature = Cl-SCC by definition. This morphology is distinguishable from HE (less branching, often transgranular in specific planes) and intergranular corrosion (dissolution at boundaries, not propagating cracks under stress). The triad of conditions is the diagnostic framework.</div>
+            </div>
+          </div>
+          <div class="trap-alert">
+            <span class="trap-icon">⚠️</span>
+            <div>
+              <div class="ta-label">PE Trap Alert</div>
+              <div class="ta-text">Sensitization (answer C) is the most common wrong answer here because the question mentions "improper PWHT." The PE test writer planted this to distract students who memorize "sensitization = stainless + weld." Sensitization causes intergranular dissolution — not branching crack networks under stress. The branching morphology is the Cl-SCC signature that rules out simple sensitization.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- ========== CASE 8 ========== -->
+  <article class="case-card" data-category="ht fail" id="case8">
+    <div class="case-header" onclick="toggleCase('case8')">
+      <div class="case-number">08</div>
+      <div class="case-meta">
+        <div class="case-tags">
+          <span class="tag tag-ht">Heat Treatment</span>
+          <span class="tag tag-fail">Failure Analysis</span>
+          <span class="diff-dot diff-2"></span><span style="font-size:0.78rem;color:var(--text3)">Intermediate</span>
+        </div>
+        <div class="case-title">High-Carbon Tool Steel Cracks During Quench</div>
+        <div class="case-summary">A punch die made from AISI W1 tool steel (1.05% C) cracks through the cross-section immediately on water quenching. The tool had been successfully austenitized. The failure is reproducible. No prior cracking was detected before quench.</div>
+      </div>
+      <div class="case-chevron">▼</div>
+    </div>
+    <div class="case-body">
+      <div class="case-body-inner">
+        <div class="scenario-box">
+          <div class="box-label">Scenario</div>
+          <p>W1 water-hardening tool steel (1.05% C, plain carbon, no alloy additions) punch die quenched in agitated water at 20°C fractures through the thickest section (section thickness 60 mm) immediately after removal from the quench. The fracture is brittle, following a roughly transverse plane. Austenitizing was performed correctly at 790°C. The part had no prior defects. A competitor shop uses the same steel successfully on thinner punches (section ~15 mm).</div>
+        </div>
+        <div class="clues-box">
+          <div class="box-label">Engineering Clues</div>
+          <ul class="clue-list">
+            <li>High-carbon plain steel (W1) — very low hardenability</li>
+            <li>Thick section (60 mm) — severe internal thermal gradient during quench</li>
+            <li>Water quench (most severe common medium) — maximum thermal shock</li>
+            <li>Competitor succeeds with thin sections — same material, different section</li>
+            <li>Crack is brittle, immediate — thermal/transformation stress exceeds tensile strength</li>
+          </ul>
+        </div>
+        <div class="question-section">
+          <div class="question-text">What is the primary cause, and which corrective action is most appropriate for this thick-section tool?</div>
+          <ul class="options-list" id="q8-opts">
+            <li><button class="option-btn" data-q="q8" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">A</span>Austenitizing temperature was too high, causing excessive grain growth; reduce temperature by 30°C</button></li>
+            <li><button class="option-btn" data-q="q8" data-correct="true" onclick="selectOption(this)"><span class="opt-letter">B</span>Water quench creates excessive thermal/transformation stresses in the thick section; switch to oil quench or use an alloy die steel (D2 or H13) with better hardenability</button></li>
+            <li><button class="option-btn" data-q="q8" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">C</span>Decarburization during austenitizing weakened the surface; use a protective atmosphere furnace</button></li>
+            <li><button class="option-btn" data-q="q8" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">D</span>The quench tank temperature was too warm; chill the water to below 10°C</button></li>
+          </ul>
+        </div>
+        <div class="reveal-panel" id="q8-reveal">
+          <div class="rationale-block">
+            <div class="box-label">Correct Answer — B: Quench Severity + Section Thickness Mismatch; Use Oil or Alloy Steel</div>
+            <p>W1 is a water-hardening steel specifically because its plain-carbon composition requires very fast quenching (water, brine) to bypass the closely-spaced TTT nose. For thin sections (≤15 mm), water quench works because the section cools fast enough throughout. For 60 mm thick sections, water quench creates catastrophic thermal gradients: the surface contracts rapidly and transforms to martensite first, then the core contracts and transforms, generating tensile stresses that exceed the fracture strength of the already-brittle martensitic case. The solution has two branches: (1) use oil quench — won't harden W1 through 60 mm (soft core) but may be acceptable if only surface hardness is needed; or (2) switch to an alloy steel (D2, A2, H13) that can achieve full hardness throughout 60 mm with an oil quench — because alloy additions push the TTT nose far right, allowing slower quench + lower thermal gradient + adequate hardness.</p>
+          </div>
+          <div class="key-clue-block">
+            <span class="key-clue-icon">🔑</span>
+            <div>
+              <div class="kc-label">Key Clue</div>
+              <div class="kc-text">The section thickness comparison (60 mm fails, 15 mm succeeds — same steel, same process) definitively locates the variable as section thickness and the associated thermal gradient. This is a classic hardenability/section-size mismatch problem. W1 is designed for thin sections with water quench. Using it in thick sections is the root cause.</div>
+            </div>
+          </div>
+          <div class="trap-alert">
+            <span class="trap-icon">⚠️</span>
+            <div>
+              <div class="ta-label">PE Trap Alert</div>
+              <div class="ta-text">Answer D (colder water) is a trap because it sounds logical but actually makes cracking <em>worse</em> — a colder, more aggressive quench increases the thermal gradient. When quench cracking is the problem, the correct direction is <em>less</em> severe quench, not more severe.</div>
+            </div>
+          </div>
+          <div class="concept-chain">
+            <div class="box-label">Concept Chain</div>
+            <div class="chain-flow">
+              <span class="chain-step">W1 + 60 mm section</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Water quench → extreme ΔT</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Case transforms first (martensite)</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Core transformation later + contraction</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Tensile stress in case > fracture strength</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Quench crack</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- ========== CASE 9 ========== -->
+  <article class="case-card" data-category="fail grain" id="case9">
+    <div class="case-header" onclick="toggleCase('case9')">
+      <div class="case-number">09</div>
+      <div class="case-meta">
+        <div class="case-tags">
+          <span class="tag tag-fail">Failure Analysis</span>
+          <span class="tag tag-grain">Grain/Toughness</span>
+          <span class="diff-dot diff-3"></span><span style="font-size:0.78rem;color:var(--text3)">Expert</span>
+        </div>
+        <div class="case-title">Component for Cold Climate Fails Unexpectedly</div>
+        <div class="case-summary">A medium-carbon steel bracket specified for use at −40°C fractures in transit during winter shipping. The fracture is brittle with no macroscopic deformation. Lab tensile tests at room temperature show normal ductility and strength. Impact test results at −40°C are 8 J (Charpy).</div>
+      </div>
+      <div class="case-chevron">▼</div>
+    </div>
+    <div class="case-body">
+      <div class="case-body-inner">
+        <div class="scenario-box">
+          <div class="box-label">Scenario</div>
+          <p>Carbon steel bracket (normalized 1045, ASTM A108 bar stock) rated for −40°C service fractures in transit at −35°C. Room-temperature tensile: Fy = 420 MPa, Fu = 680 MPa, elongation = 18% — all meet specification. Charpy V-notch testing: 75 J at +20°C, 8 J at −40°C. Design required minimum toughness of 27 J at −40°C. The material was not specified with a Charpy impact requirement at low temperature.</div>
+        </div>
+        <div class="clues-box">
+          <div class="box-label">Engineering Clues</div>
+          <ul class="clue-list">
+            <li>Room-temperature properties meet spec — strength and ductility normal</li>
+            <li>Charpy at −40°C = 8 J vs 27 J required — dramatically below requirement</li>
+            <li>BCC steel (ferritic/pearlitic) — has a ductile-to-brittle transition temperature (DBTT)</li>
+            <li>Service temperature is below DBTT for this material</li>
+            <li>No low-temperature impact requirement was specified — engineering oversight</li>
+          </ul>
+        </div>
+        <div class="question-section">
+          <div class="question-text">What is the root cause of this failure, and which material or process change most effectively shifts the DBTT below −40°C?</div>
+          <ul class="options-list" id="q9-opts">
+            <li><button class="option-btn" data-q="q9" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">A</span>The component was over-stressed in transit; increase wall thickness to reduce stress</button></li>
+            <li><button class="option-btn" data-q="q9" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">B</span>Hydrogen embrittlement during shipping; bake the component before use</button></li>
+            <li><button class="option-btn" data-q="q9" data-correct="true" onclick="selectOption(this)"><span class="opt-letter">C</span>Service temperature below DBTT; switch to fine-grained, normalized low-carbon steel, or a killed/fine-grain alloy specification with verified Charpy at −40°C</button></li>
+            <li><button class="option-btn" data-q="q9" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">D</span>The material was not heat treated; normalize to improve strength</button></li>
+          </ul>
+        </div>
+        <div class="reveal-panel" id="q9-reveal">
+          <div class="rationale-block">
+            <div class="box-label">Correct Answer — C: Below DBTT → Fine-Grain Steel + Charpy Specification</div>
+            <p>BCC steels (carbon steel, low-alloy steel) exhibit a ductile-to-brittle transition. Above the DBTT, the dominant fracture mode is microvoid coalescence (ductile). Below the DBTT, cleavage fracture dominates — sudden, brittle, absorbing very little energy. This transition is NOT detected by room-temperature tests. Charpy impact testing at service temperature is the appropriate qualification test. This bracket's DBTT is clearly above −40°C. Remedies: (1) specify fine-grained steel — fine grains lower the DBTT by providing more grain boundaries that interrupt cleavage crack propagation; (2) use fully killed, fine-grain practice steel (e.g., ASTM A572 Gr. 50 with CVN requirement, or A709 HPS grades); (3) switch to a material without a DBTT — FCC materials (austenitic SS, aluminum alloys) do not exhibit a sharp DBTT. The fundamental error was failing to specify toughness at the service temperature in the original design — a critical oversight for cold-service applications.</p>
+          </div>
+          <div class="key-clue-block">
+            <span class="key-clue-icon">🔑</span>
+            <div>
+              <div class="kc-label">Key Clue</div>
+              <div class="kc-text">The dramatic difference between room-temperature ductility (18% elongation) and low-temperature toughness (8 J vs 27 J required) is the signature of a DBTT problem. Room-temperature tests are IRRELEVANT for cold-service design. Always test at or below service temperature for BCC materials in cold applications.</div>
+            </div>
+          </div>
+          <div class="trap-alert">
+            <span class="trap-icon">⚠️</span>
+            <div>
+              <div class="ta-label">PE Trap Alert</div>
+              <div class="ta-text">A component can pass ALL room-temperature strength and ductility specifications and still be completely unqualified for low-temperature service. The DBTT is invisible in standard tensile testing. PE candidates must recognize that cold-service qualification requires impact testing at service temperature — not room-temperature tests.</div>
+            </div>
+          </div>
+          <div class="concept-chain">
+            <div class="box-label">Concept Chain</div>
+            <div class="chain-flow">
+              <span class="chain-step">BCC steel (1045)</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Has DBTT</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Service T &lt; DBTT</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Cleavage fracture mode</span><span class="chain-arrow">→</span>
+              <span class="chain-step">8 J absorbed at −40°C</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Brittle fracture under transit loading</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- ========== CASE 10 ========== -->
+  <article class="case-card" data-category="ht" id="case10">
+    <div class="case-header" onclick="toggleCase('case10')">
+      <div class="case-number">10</div>
+      <div class="case-meta">
+        <div class="case-tags">
+          <span class="tag tag-ht">Heat Treatment</span>
+          <span class="diff-dot diff-1"></span><span style="font-size:0.78rem;color:var(--text3)">Foundation</span>
+        </div>
+        <div class="case-title">Component Needs Machinability Before Final Hardening</div>
+        <div class="case-summary">A medium-carbon steel (1045) component requires extensive machining (drilling, milling, turning) before it can be hardened to final specification (50–54 HRC). As-rolled stock is too hard for efficient machining. Which treatment enables best machinability without sacrificing final hardening potential?</div>
+      </div>
+      <div class="case-chevron">▼</div>
+    </div>
+    <div class="case-body">
+      <div class="case-body-inner">
+        <div class="scenario-box">
+          <div class="box-label">Scenario</div>
+          <p>AISI 1045 stock (as-rolled, ~200 HB) must be machined into a complex component before heat treatment. Machinists report excessive tool wear and chatter during finish turning. The final specification after heat treatment is 50–54 HRC (quench + temper). The process engineer must select a pre-machining treatment that (a) reduces hardness for machinability and (b) does not hinder the final quench-harden operation.</p>
+        </div>
+        <div class="clues-box">
+          <div class="box-label">Engineering Clues</div>
+          <ul class="clue-list">
+            <li>200 HB is too hard for efficient free-cutting in 1045</li>
+            <li>Spheroidized microstructure (globular carbides in ferrite matrix) provides optimum machinability for medium/high carbon steel</li>
+            <li>Final operation requires hardening — pre-treatment must not destabilize future austenitizing</li>
+            <li>Overannealing to very coarse microstructure may slow austenitizing and produce poor, mixed final microstructure</li>
+          </ul>
+        </div>
+        <div class="question-section">
+          <div class="question-text">Which pre-machining heat treatment is most appropriate for AISI 1045 to optimize machinability while preserving final hardenability?</div>
+          <ul class="options-list" id="q10-opts">
+            <li><button class="option-btn" data-q="q10" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">A</span>Full anneal (heat above Ac3, slow furnace cool to form coarse pearlite)</button></li>
+            <li><button class="option-btn" data-q="q10" data-correct="true" onclick="selectOption(this)"><span class="opt-letter">B</span>Spheroidizing anneal (cycle near Ac1 to form globular carbides in ferrite)</button></li>
+            <li><button class="option-btn" data-q="q10" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">C</span>Normalizing (heat above Ac3, air cool to form fine pearlite)</button></li>
+            <li><button class="option-btn" data-q="q10" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">D</span>Stress relieving (heat below Ac1, hold, slow cool)</button></li>
+          </ul>
+        </div>
+        <div class="reveal-panel" id="q10-reveal">
+          <div class="rationale-block">
+            <div class="box-label">Correct Answer — B: Spheroidizing Anneal</div>
+            <p>Spheroidizing converts lamellar or coarse pearlitic carbides (Fe₃C lamellae) into globular (spheroidal) carbides dispersed in a soft ferrite matrix. This microstructure is the softest achievable in steel without alloying changes, typically reducing hardness to 150–165 HB for 1045, dramatically improving machinability by reducing cutting force and tool wear (cutting through soft ferrite between carbide spheroids, rather than shearing lamellar pearlite plates). Importantly, spheroidized carbides dissolve readily on austenitizing before the final quench — the globular geometry has more total surface area exposed to the austenite matrix, and the particles dissolve quickly at austenitizing temperature. Full hardenability is preserved. This is the standard pre-machining treatment for medium and high-carbon steels.</p>
+          </div>
+          <div class="distractor-block">
+            <div class="box-label">Why the Distractors Fail</div>
+            <ul>
+              <li><strong>A:</strong> Full anneal produces a coarse lamellar pearlite — softer than as-rolled but not as soft as spheroidite. Coarse pearlite still presents hard carbide lamellae to cutting tools. Spheroidite is softer.</li>
+              <li><strong>C:</strong> Normalizing produces fine pearlite — actually harder than as-rolled or annealed microstructures in some cases. It is used for grain refinement, not machinability improvement. It would make things worse.</li>
+              <li><strong>D:</strong> Stress relieving (below Ac1) relieves internal stresses but does not change the carbide morphology or significantly reduce hardness. Machinability improvement would be minimal.</li>
+            </ul>
+          </div>
+          <div class="key-clue-block">
+            <span class="key-clue-icon">🔑</span>
+            <div>
+              <div class="kc-label">Key Clue</div>
+              <div class="kc-text">When the question asks for maximum machinability of medium/high-carbon steel → the answer is almost always spheroidizing. The globular carbide in ferrite matrix is the softest microstructure possible in steel and cuts like butter compared to lamellar structures.</div>
+            </div>
+          </div>
+          <div class="trap-alert">
+            <span class="trap-icon">⚠️</span>
+            <div>
+              <div class="ta-label">PE Trap Alert</div>
+              <div class="ta-text">Many students instinctively choose "full anneal" for machinability improvement, since annealing = soft. But for medium/high-carbon steels, spheroidizing produces a softer microstructure than full annealing. The distinction matters — spheroidite &lt; full anneal &lt; normalize in hardness for these steels.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- CASES 11–20: COMPACT VERSIONS -->
+
+  <!-- ========== CASE 11 ========== -->
+  <article class="case-card" data-category="emb fail" id="case11">
+    <div class="case-header" onclick="toggleCase('case11')">
+      <div class="case-number">11</div>
+      <div class="case-meta">
+        <div class="case-tags">
+          <span class="tag tag-emb">Embrittlement</span>
+          <span class="tag tag-fail">Failure Analysis</span>
+          <span class="diff-dot diff-3"></span><span style="font-size:0.78rem;color:var(--text3)">Expert</span>
+        </div>
+        <div class="case-title">Duplex Stainless Loses Toughness in Service Temperature Range</div>
+        <div class="case-summary">A duplex SS (2205) chemical plant vessel used at 490°C loses toughness over 18 months with no other visible change. What embrittlement mechanism is responsible?</div>
+      </div>
+      <div class="case-chevron">▼</div>
+    </div>
+    <div class="case-body">
+      <div class="case-body-inner">
+        <div class="scenario-box">
+          <div class="box-label">Scenario</div>
+          <p>2205 duplex stainless steel reactor vessel operated at 490°C (914°F) shows impact toughness drop from 180 J to 35 J after 18 months. No corrosion. No microstructural change visible at low magnification. High-magnification TEM shows spinodal decomposition in the ferrite phase.</p>
+        </div>
+        <div class="clues-box">
+          <div class="box-label">Engineering Clues</div>
+          <ul class="clue-list">
+            <li>Temperature: 475–500°C — specific embrittlement range for ferrite</li>
+            <li>Duplex SS has both austenite and ferrite phases</li>
+            <li>TEM shows spinodal decomposition in ferrite</li>
+            <li>Toughness drops — strength may increase slightly</li>
+          </ul>
+        </div>
+        <div class="question-section">
+          <div class="question-text">Which embrittlement mechanism is occurring and what is the primary mitigation?</div>
+          <ul class="options-list" id="q11-opts">
+            <li><button class="option-btn" data-q="q11" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">A</span>Sigma phase embrittlement; solution anneal at 1050°C</button></li>
+            <li><button class="option-btn" data-q="q11" data-correct="true" onclick="selectOption(this)"><span class="opt-letter">B</span>475°C (885°F) embrittlement; avoid service in 400–520°C range or redesign for lower temperature service</button></li>
+            <li><button class="option-btn" data-q="q11" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">C</span>Temper embrittlement from phosphorus segregation; reduce P content in future heat</button></li>
+            <li><button class="option-btn" data-q="q11" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">D</span>Sensitization; perform solution treatment and rapid quench</button></li>
+          </ul>
+        </div>
+        <div class="reveal-panel" id="q11-reveal">
+          <div class="rationale-block">
+            <div class="box-label">Correct Answer — B: 475°C Embrittlement</div>
+            <p>The 475°C (885°F) embrittlement is specific to high-chromium ferritic and duplex stainless steels. The ferrite phase (typically 22–28% Cr in duplex SS) undergoes spinodal decomposition in the 300–520°C range, separating into Cr-rich (α') and Fe-rich (α) regions at a nanoscale that is invisible to optical microscopy but detectable by TEM/atom probe. This coherent microstructural change significantly embrittles the ferrite phase, causing the overall toughness drop. The temperature (490°C), material (duplex SS), and TEM finding (spinodal decomposition in ferrite) are all precisely diagnostic. Mitigation: avoid sustained service at 400–520°C. If unavoidable, redesign to reduce time at temperature or select austenitic alloy without ferrite. The embrittlement is partially reversible by heating above ~550°C, but sustained operation at 490°C will continuously re-embrittle the material.</p>
+          </div>
+          <div class="key-clue-block">
+            <span class="key-clue-icon">🔑</span>
+            <div>
+              <div class="kc-label">Key Clue</div>
+              <div class="kc-text">Temperature 475–500°C + ferrite-containing stainless + spinodal decomposition in ferrite + toughness drop = 475°C embrittlement. The specific temperature range and the ferrite phase are the discriminating factors versus sigma phase (higher temperature, ~600–900°C) or temper embrittlement (different temperature, different mechanism).</div>
+            </div>
+          </div>
+          <div class="trap-alert">
+            <span class="trap-icon">⚠️</span>
+            <div>
+              <div class="ta-label">PE Trap Alert</div>
+              <div class="ta-text">Sigma phase embrittlement (answer A) is the most common wrong answer because both affect duplex SS and both reduce toughness. Sigma phase forms at higher temperatures (600–900°C) and produces a distinct intermetallic compound visible by optical metallography. 475°C embrittlement is nanoscale spinodal decomposition — not visible optically, requires TEM. The temperature and observation method distinguish them.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- ========== CASE 12 ========== -->
+  <article class="case-card" data-category="fail" id="case12">
+    <div class="case-header" onclick="toggleCase('case12')">
+      <div class="case-number">12</div>
+      <div class="case-meta">
+        <div class="case-tags">
+          <span class="tag tag-fail">Failure Analysis</span>
+          <span class="diff-dot diff-2"></span><span style="font-size:0.78rem;color:var(--text3)">Intermediate</span>
+        </div>
+        <div class="case-title">Spring Fails After Over-Tempering</div>
+        <div class="case-summary">A coil spring (4340 steel, spec: 45–50 HRC) is accidentally tempered at 540°C instead of 250°C. It passes static load test but fails in service with cracking that originates in the core. What has changed and what is the risk?</div>
+      </div>
+      <div class="case-chevron">▼</div>
+    </div>
+    <div class="case-body">
+      <div class="case-body-inner">
+        <div class="scenario-box">
+          <div class="box-label">Scenario</div>
+          <p>4340 spring: quenched to full martensite, then accidentally tempered at 540°C (in the temper embrittlement range for alloy steels). Resulting hardness: 35–38 HRC (too soft). Toughness measured: Charpy 22 J at room temperature. Expected from correct tempering (250°C): Charpy ~80 J. Static test passes. Cyclic loading in service leads to unexpected cracking.</p>
+        </div>
+        <div class="clues-box">
+          <div class="box-label">Engineering Clues</div>
+          <ul class="clue-list">
+            <li>540°C = temper embrittlement range for 4340 (450–565°C zone)</li>
+            <li>Toughness dramatically reduced despite "softer" steel</li>
+            <li>Hardness dropped well below spec (35 vs 45–50 HRC required)</li>
+            <li>Static test passed (strength still present) — dynamic/fatigue behavior compromised</li>
+          </ul>
+        </div>
+        <div class="question-section">
+          <div class="question-text">Which statement best describes the metallurgical condition of this spring and the correct disposition?</div>
+          <ul class="options-list" id="q12-opts">
+            <li><button class="option-btn" data-q="q12" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">A</span>Over-tempered to troostite/sorbite — adequately tough, use as-is with reduced load rating</button></li>
+            <li><button class="option-btn" data-q="q12" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">B</span>Tempered correctly but at too low a temperature; re-temper at 250°C</button></li>
+            <li><button class="option-btn" data-q="q12" data-correct="true" onclick="selectOption(this)"><span class="opt-letter">C</span>Temper embrittlement has occurred and the part is BOTH below hardness spec AND embrittled; re-austenitize, re-quench, and properly re-temper</button></li>
+            <li><button class="option-btn" data-q="q12" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">D</span>Re-temper at 300°C to restore hardness while keeping toughness</button></li>
+          </ul>
+        </div>
+        <div class="reveal-panel" id="q12-reveal">
+          <div class="rationale-block">
+            <div class="box-label">Correct Answer — C: Both Embrittled AND Under-hardness; Full Re-process Required</div>
+            <p>540°C falls in the temper embrittlement range for low-alloy steels like 4340 (approximately 450–565°C). Tempering in this range causes embrittling impurities (P, Sb, Sn, As) to segregate to prior austenite grain boundaries, reducing grain boundary cohesive strength. The result is BOTH: (1) over-tempered martensite → hardness well below specification (35 HRC vs 45–50 required), and (2) embrittled grain boundaries → low toughness (22 J vs ~80 J). Re-tempering at a lower temperature cannot restore hardness (carbide coarsening during the 540°C temper is irreversible without re-austenitizing). The only correct path is full re-processing: re-austenitize to dissolve all carbides, re-quench to form fresh martensite, and re-temper at the correct temperature (250°C) to achieve both hardness and toughness specifications.</p>
+          </div>
+          <div class="key-clue-block">
+            <span class="key-clue-icon">🔑</span>
+            <div>
+              <div class="kc-label">Key Clue</div>
+              <div class="kc-text">The double penalty of over-tempering in the embrittlement zone: both hardness AND toughness are compromised. Tempering at 540°C is not "just softer" — it is specifically destructive to toughness through grain boundary segregation. This is worse than tempering at 650°C (over-soft but not specifically embrittled in the same way).</div>
+            </div>
+          </div>
+          <div class="trap-alert">
+            <span class="trap-icon">⚠️</span>
+            <div>
+              <div class="ta-label">PE Trap Alert</div>
+              <div class="ta-text">Students assume "softer = tougher." In the 450–565°C temper embrittlement zone, this is false. Hardness drops AND toughness drops. This is the most dangerous misconception about temper embrittlement: the steel looks reasonable (softer, passes static test) but is actually more brittle than properly tempered martensite at lower temperature.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- ========== CASE 13 ========== -->
+  <article class="case-card" data-category="hard ht" id="case13">
+    <div class="case-header" onclick="toggleCase('case13')">
+      <div class="case-number">13</div>
+      <div class="case-meta">
+        <div class="case-tags">
+          <span class="tag tag-hard">Hardenability</span>
+          <span class="tag tag-ht">Heat Treatment</span>
+          <span class="diff-dot diff-2"></span><span style="font-size:0.78rem;color:var(--text3)">Intermediate</span>
+        </div>
+        <div class="case-title">Oil vs. Water Quench Selection — Alloy Steel Shaft</div>
+        <div class="case-summary">An engineer must select between water and oil quench for a 4140 shaft requiring 40 HRC minimum. Section size is 50 mm. The design also requires no quench cracks. Which is the correct engineering choice and why?</div>
+      </div>
+      <div class="case-chevron">▼</div>
+    </div>
+    <div class="case-body">
+      <div class="case-body-inner">
+        <div class="scenario-box">
+          <div class="box-label">Scenario</div>
+          <p>AISI 4140 alloy steel shaft (50 mm diameter) must achieve 40 HRC minimum after quench and temper. 4140 has excellent hardenability (alloy additions Cr + Mo shift TTT nose well to the right). Water quench trials produce 48 HRC but ~30% of parts crack. Oil quench trials produce 44 HRC with zero cracking. Target minimum is 40 HRC.</p>
+        </div>
+        <div class="clues-box">
+          <div class="box-label">Engineering Clues</div>
+          <ul class="clue-list">
+            <li>4140 has high hardenability — oil quench can still bypass the pearlite/bainite nose at 50 mm</li>
+            <li>Water quench exceeds hardness spec (48 &gt; 40) but causes cracking</li>
+            <li>Oil quench also exceeds spec (44 &gt; 40) with zero cracking</li>
+            <li>The specification is a MINIMUM — not a target maximum</li>
+            <li>Design requires no quench cracks</li>
+          </ul>
+        </div>
+        <div class="question-section">
+          <div class="question-text">Which quench medium should be selected and why?</div>
+          <ul class="options-list" id="q13-opts">
+            <li><button class="option-btn" data-q="q13" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">A</span>Water quench — higher hardness (48 HRC) provides safety margin above the 40 HRC minimum</button></li>
+            <li><button class="option-btn" data-q="q13" data-correct="true" onclick="selectOption(this)"><span class="opt-letter">B</span>Oil quench — achieves required hardness (44 &gt; 40 HRC) with zero cracking; use slowest quench that still meets specification</button></li>
+            <li><button class="option-btn" data-q="q13" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">C</span>Water quench with immediate immersion in cold oil to arrest cracking</button></li>
+            <li><button class="option-btn" data-q="q13" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">D</span>Air quench — eliminates cracking entirely, with potential hardness compromise</button></li>
+          </ul>
+        </div>
+        <div class="reveal-panel" id="q13-reveal">
+          <div class="rationale-block">
+            <div class="box-label">Correct Answer — B: Oil Quench — Slowest Acceptable Medium</div>
+            <p>The engineering principle is: use the slowest quench medium that still achieves the required microstructure and hardness, in order to minimize thermal gradients, residual stresses, distortion, and cracking risk. Oil quench delivers 44 HRC — above the 40 HRC minimum requirement — with zero cracking. Water quench delivers higher hardness (48 HRC) but at the cost of a 30% crack rate, which is commercially and structurally unacceptable. The correct decision is not to maximize hardness but to satisfy the specification while minimizing process risk. 4140's high hardenability specifically enables this — it is designed to achieve full martensite with oil quench in typical section sizes, precisely so that the more aggressive (and cracking-prone) water quench is unnecessary.</p>
+          </div>
+          <div class="key-clue-block">
+            <span class="key-clue-icon">🔑</span>
+            <div>
+              <div class="kc-label">Key Clue</div>
+              <div class="kc-text">The design requirement is a <em>minimum</em> hardness. Both media exceed the minimum. The decision criterion must then be reliability and crack rate — and oil wins decisively (0% vs 30% cracking). More quench severity than needed is wasteful and dangerous. The PE principle: slowest acceptable quench.</div>
+            </div>
+          </div>
+          <div class="trap-alert">
+            <span class="trap-icon">⚠️</span>
+            <div>
+              <div class="ta-label">PE Trap Alert</div>
+              <div class="ta-text">Answer A is tempting because "harder = safer margin." But the design specified a <em>minimum</em> — exceeding it does not justify a 30% crack rate. Cracked parts are scrap (or worse, dangerous in service). The engineer's job is to meet specification with the safest, most reliable process — not to maximize hardness at the expense of yield rate.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- ========== CASES 14–20: CONDENSED BUT COMPLETE ========== -->
+
+  <!-- CASE 14 -->
+  <article class="case-card" data-category="fail" id="case14">
+    <div class="case-header" onclick="toggleCase('case14')">
+      <div class="case-number">14</div>
+      <div class="case-meta">
+        <div class="case-tags"><span class="tag tag-fail">Failure Analysis</span><span class="diff-dot diff-3"></span><span style="font-size:0.78rem;color:var(--text3)">Expert</span></div>
+        <div class="case-title">Creep Failure Misidentified as Overload</div>
+        <div class="case-summary">A high-temperature steam pipe (Cr-Mo steel) fails after 12 years with fracture at the inner surface. The fracture is intergranular with wedge-shaped grain boundary cavities. Applied stress was 40% of room-temperature yield. What failed it?</div>
+      </div>
+      <div class="case-chevron">▼</div>
+    </div>
+    <div class="case-body">
+      <div class="case-body-inner">
+        <div class="scenario-box">
+          <div class="box-label">Scenario</div>
+          <p>Cr-Mo steel steam pipe, service at 540°C, 12 years service. Fracture at inner surface. Microscopy: intergranular cracking with wedge-shaped cavities at grain boundaries, and grain boundary sliding evidence. No macroscopic necking. Applied hoop stress = 40% of room-temperature Fy. Failure report initially attributed to "overload."</p>
+        </div>
+        <div class="clues-box">
+          <div class="box-label">Engineering Clues</div>
+          <ul class="clue-list">
+            <li>Long service life (12 years) — time-dependent mechanism</li>
+            <li>High temperature (540°C) — above creep threshold for steel (~0.4 Tm)</li>
+            <li>Intergranular fracture with grain boundary cavities</li>
+            <li>Wedge cracks and grain boundary sliding evidence</li>
+            <li>Stress below yield — rules out static ductile overload</li>
+          </ul>
+        </div>
+        <div class="question-section">
+          <div class="question-text">Which failure mechanism best explains these findings?</div>
+          <ul class="options-list" id="q14-opts">
+            <li><button class="option-btn" data-q="q14" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">A</span>High-cycle fatigue from thermal cycling</button></li>
+            <li><button class="option-btn" data-q="q14" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">B</span>Hydrogen embrittlement from steam environment</button></li>
+            <li><button class="option-btn" data-q="q14" data-correct="true" onclick="selectOption(this)"><span class="opt-letter">C</span>Creep (tertiary stage) — grain boundary cavitation and wedge cracking at elevated temperature under sustained stress</button></li>
+            <li><button class="option-btn" data-q="q14" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">D</span>Stress corrosion cracking from steam condensate</button></li>
+          </ul>
+        </div>
+        <div class="reveal-panel" id="q14-reveal">
+          <div class="rationale-block">
+            <div class="box-label">Correct Answer — C: Creep Failure</div>
+            <p>Creep is time-dependent plastic deformation under sustained stress at elevated temperature. The hallmarks of tertiary creep failure are: intergranular fracture, grain boundary cavitation (r-type and w-type cavities), wedge cracking at triple points, grain boundary sliding, and final separation without macroscopic necking. At 540°C, Cr-Mo steel is well into the creep regime (~0.4–0.5 Tm). The 12-year timeline, sub-yield stress, and specific microscopic features are definitively creep. The initial "overload" diagnosis was wrong because stress was below yield and no necking occurred — both ruling out overload. This is also why creep is underdiagnosed: visual inspection looks like brittle fracture but the mechanism is thermally activated, time-dependent deformation leading to intergranular separation.</p>
+          </div>
+          <div class="key-clue-block">
+            <span class="key-clue-icon">🔑</span>
+            <div><div class="kc-label">Key Clue</div><div class="kc-text">Grain boundary cavities + wedge cracks + grain boundary sliding + high temperature + sustained stress + 12-year timeline = textbook tertiary creep. The long service life and below-yield stress rule out all rapid failure mechanisms.</div></div>
+          </div>
+          <div class="trap-alert">
+            <span class="trap-icon">⚠️</span>
+            <div><div class="ta-label">PE Trap Alert</div><div class="ta-text">Creep fractures look brittle (intergranular, no macroscopic necking) but are NOT brittle fractures in the DBTT sense. The mechanism is fundamentally different: thermally activated grain boundary sliding and cavitation over time. Temperature + time + stress is the creep triad.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- CASE 15 -->
+  <article class="case-card" data-category="grain ht" id="case15">
+    <div class="case-header" onclick="toggleCase('case15')">
+      <div class="case-number">15</div>
+      <div class="case-meta">
+        <div class="case-tags"><span class="tag tag-grain">Grain/Toughness</span><span class="tag tag-ht">Heat Treatment</span><span class="diff-dot diff-2"></span><span style="font-size:0.78rem;color:var(--text3)">Intermediate</span></div>
+        <div class="case-title">Normalizing vs. Annealing for Toughness in Structural Application</div>
+        <div class="case-summary">A structural component cast from medium-carbon steel is to be heat treated prior to assembly. The design prioritizes impact toughness at 0°C and uniform properties. Should the engineer specify full annealing or normalizing?</div>
+      </div>
+      <div class="case-chevron">▼</div>
+    </div>
+    <div class="case-body">
+      <div class="case-body-inner">
+        <div class="scenario-box">
+          <div class="box-label">Scenario</div>
+          <p>Cast 1040 steel component (agricultural equipment, outdoor service to −10°C). As-cast microstructure is heterogeneous with coarse dendrites. Engineer must choose between full anneal and normalizing to prepare the casting for service. Property priorities: toughness &gt; strength &gt; hardness.</p>
+        </div>
+        <div class="clues-box">
+          <div class="box-label">Engineering Clues</div>
+          <ul class="clue-list">
+            <li>As-cast = coarse, segregated microstructure — poor toughness baseline</li>
+            <li>Full anneal → very coarse equiaxed ferrite + coarse pearlite (too soft, possibly poor toughness)</li>
+            <li>Normalizing → fine equiaxed ferrite + fine pearlite (better toughness via fine grain)</li>
+            <li>Fine grain lowers DBTT — beneficial for cold service</li>
+          </ul>
+        </div>
+        <div class="question-section">
+          <div class="question-text">Which treatment produces better impact toughness at 0°C for this cast component?</div>
+          <ul class="options-list" id="q15-opts">
+            <li><button class="option-btn" data-q="q15" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">A</span>Full anneal — softest microstructure, most ductile</button></li>
+            <li><button class="option-btn" data-q="q15" data-correct="true" onclick="selectOption(this)"><span class="opt-letter">B</span>Normalizing — finer grain, lower DBTT, better impact toughness</button></li>
+            <li><button class="option-btn" data-q="q15" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">C</span>Spheroidizing — softest structure, maximum ductility</button></li>
+            <li><button class="option-btn" data-q="q15" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">D</span>Stress relieving — removes residual casting stresses</button></li>
+          </ul>
+        </div>
+        <div class="reveal-panel" id="q15-reveal">
+          <div class="rationale-block">
+            <div class="box-label">Correct Answer — B: Normalizing</div>
+            <p>Normalizing (heat above Ac3, air cool) produces finer grain size and finer pearlite compared to full annealing (furnace-cooled). Fine grain size: (1) lowers the DBTT (Hall-Petch relationship applied to cleavage initiation), (2) reduces facet size for cleavage, (3) improves Charpy impact energy at low temperatures. For cold-service applications requiring toughness, normalizing is typically superior to full annealing for medium-carbon steels, even though the normalized steel may be slightly harder. The toughness gain from fine grain outweighs the small strength-ductility tradeoff. Full annealing produces coarser grain and coarser pearlite — which is softer but has lower toughness than normalized fine-grained microstructure.</p>
+          </div>
+          <div class="trap-alert">
+            <span class="trap-icon">⚠️</span>
+            <div><div class="ta-label">PE Trap Alert</div><div class="ta-text">Soft ≠ tough. Full anneal gives maximum softness but coarser grain and potentially lower toughness at low temperatures than normalizing. This counterintuitive result trips up students who equate ductility and toughness. Toughness depends on grain size and fracture mode transition — not just on tensile ductility.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- CASE 16 -->
+  <article class="case-card" data-category="emb fail" id="case16">
+    <div class="case-header" onclick="toggleCase('case16')">
+      <div class="case-number">16</div>
+      <div class="case-meta">
+        <div class="case-tags"><span class="tag tag-emb">Embrittlement</span><span class="tag tag-fail">Failure Analysis</span><span class="diff-dot diff-3"></span><span style="font-size:0.78rem;color:var(--text3)">Expert</span></div>
+        <div class="case-title">Liquid Metal Embrittlement During Galvanizing</div>
+        <div class="case-summary">A high-strength steel bracket fractures during hot-dip galvanizing (450°C zinc bath). The bracket had visible residual tensile stresses from fabrication bending. Fracture is intergranular, instantaneous on contact with molten zinc.</div>
+      </div>
+      <div class="case-chevron">▼</div>
+    </div>
+    <div class="case-body">
+      <div class="case-body-inner">
+        <div class="scenario-box">
+          <div class="box-label">Scenario</div>
+          <p>A55 structural steel bracket, cold-bent during fabrication (residual tensile stress at outer fiber). During hot-dip galvanizing (450°C zinc), the bracket fractures catastrophically. Fracture is intergranular, instantaneous. No prior cracking observed. The identical design in lower strength steel (Fy = 250 MPa) does not fracture.</p>
+        </div>
+        <div class="clues-box">
+          <div class="box-label">Engineering Clues</div>
+          <ul class="clue-list">
+            <li>Fracture occurs in contact with molten zinc — not before or after</li>
+            <li>Residual tensile stress from cold bending</li>
+            <li>Higher strength steel more susceptible</li>
+            <li>Intergranular, instantaneous — no time-dependency</li>
+          </ul>
+        </div>
+        <div class="question-section">
+          <div class="question-text">Which mechanism caused this fracture?</div>
+          <ul class="options-list" id="q16-opts">
+            <li><button class="option-btn" data-q="q16" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">A</span>Hydrogen embrittlement from zinc bath chemistry</button></li>
+            <li><button class="option-btn" data-q="q16" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">B</span>Hot shortness due to elevated temperature exceeding tempering range</button></li>
+            <li><button class="option-btn" data-q="q16" data-correct="true" onclick="selectOption(this)"><span class="opt-letter">C</span>Liquid metal embrittlement (LME) — molten zinc penetrates grain boundaries under residual tensile stress</button></li>
+            <li><button class="option-btn" data-q="q16" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">D</span>Overheating embrittlement from the 450°C galvanizing temperature</button></li>
+          </ul>
+        </div>
+        <div class="reveal-panel" id="q16-reveal">
+          <div class="rationale-block">
+            <div class="box-label">Correct Answer — C: Liquid Metal Embrittlement</div>
+            <p>Liquid metal embrittlement (LME) occurs when a solid metal under tensile stress is in contact with a specific liquid metal that wets its grain boundaries, dramatically reducing grain boundary cohesive energy and enabling rapid intergranular cracking. The classic pair is solid steel + molten zinc (galvanizing). Three conditions are required: (1) susceptible solid metal (high-strength steel &gt;550 MPa), (2) tensile stress (residual or applied), and (3) contact with the embrittling liquid metal. LME is instantaneous — not time-delayed — distinguishing it from hydrogen embrittlement. Prevention: stress relieve (anneal to remove residual stresses) before galvanizing; avoid sharp bends in high-strength steel members intended for galvanizing; or use lower-strength steel.</p>
+          </div>
+          <div class="key-clue-block">
+            <span class="key-clue-icon">🔑</span>
+            <div><div class="kc-label">Key Clue</div><div class="kc-text">Instant fracture <em>on contact</em> with molten zinc + residual stress + intergranular + high-strength steel = LME. The instantaneous nature (not delayed) is the distinguishing feature vs. hydrogen embrittlement (delayed) and SCC (time-dependent with corrosion).</div></div>
+          </div>
+          <div class="trap-alert">
+            <span class="trap-icon">⚠️</span>
+            <div><div class="ta-label">PE Trap Alert</div><div class="ta-text">LME is often confused with hydrogen embrittlement because both are intergranular and both occur with high-strength steels. The decisive difference: LME is instantaneous and requires contact with liquid metal. Hydrogen embrittlement is delayed (hours to days) and does not require liquid metal contact.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- CASE 17 -->
+  <article class="case-card" data-category="hard ht" id="case17">
+    <div class="case-header" onclick="toggleCase('case17')">
+      <div class="case-number">17</div>
+      <div class="case-meta">
+        <div class="case-tags"><span class="tag tag-hard">Hardenability</span><span class="tag tag-ht">Heat Treatment</span><span class="diff-dot diff-2"></span><span style="font-size:0.78rem;color:var(--text3)">Intermediate</span></div>
+        <div class="case-title">Mixed Microstructure in Quenched Part — Diagnosing the Root Cause</div>
+        <div class="case-summary">A 4140 shaft shows a metallographic cross-section with martensite at the surface and a mixed bainite/pearlite core after oil quenching. The surface is 50 HRC; the core is 30 HRC. Required: 44 HRC minimum throughout. What went wrong?</div>
+      </div>
+      <div class="case-chevron">▼</div>
+    </div>
+    <div class="case-body">
+      <div class="case-body-inner">
+        <div class="scenario-box">
+          <div class="box-label">Scenario</div>
+          <p>4140 shaft: 75 mm diameter, oil quenched. Surface: 50 HRC (martensite confirmed). Core: 30 HRC (bainite/pearlite mixture confirmed by metallography). Required: 44 HRC minimum throughout cross section. The previous batch of 50 mm diameter 4140 shafts had no problem with the same process.</p>
+        </div>
+        <div class="clues-box">
+          <div class="box-label">Engineering Clues</div>
+          <ul class="clue-list">
+            <li>4140 has high hardenability — but not unlimited</li>
+            <li>50 mm worked; 75 mm fails — section size is the changed variable</li>
+            <li>Mixed microstructure (bainite/pearlite in core) — nose was intersected at core cooling rate</li>
+            <li>Oil quench cooling rate at core of 75 mm is slower than at core of 50 mm</li>
+          </ul>
+        </div>
+        <div class="question-section">
+          <div class="question-text">What is the most accurate diagnosis and best remedy?</div>
+          <ul class="options-list" id="q17-opts">
+            <li><button class="option-btn" data-q="q17" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">A</span>Oil was too warm; cool the oil bath to improve quench severity</button></li>
+            <li><button class="option-btn" data-q="q17" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">B</span>Austenitizing temperature was insufficient; raise temperature to dissolve more carbides</button></li>
+            <li><button class="option-btn" data-q="q17" data-correct="true" onclick="selectOption(this)"><span class="opt-letter">C</span>Section size (75 mm) exceeds the ideal critical diameter for 4140 in oil quench; switch to water or polymer quench, or use a higher-hardenability alloy</button></li>
+            <li><button class="option-btn" data-q="q17" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">D</span>Tempering was done too early; allow longer snap temper time before full temper</button></li>
+          </ul>
+        </div>
+        <div class="reveal-panel" id="q17-reveal">
+          <div class="rationale-block">
+            <div class="box-label">Correct Answer — C: Section Exceeds Ideal Critical Diameter</div>
+            <p>The ideal critical diameter (DI) is the maximum bar diameter that achieves 50% martensite at the center under ideal quench conditions. For 4140 in oil quench, DI is approximately 50–65 mm depending on exact composition. A 75 mm diameter exceeds this, meaning the core cooling rate during oil quench is too slow to bypass the TTT nose — producing mixed bainite/pearlite at the core rather than martensite. The 50 mm batch succeeded because it was within the hardenability envelope; the 75 mm batch failed because it was outside it. Solutions: (1) switch to water quench or polymer quench to accelerate core cooling; (2) use a steel with higher hardenability (e.g., 4340, which has higher DI); (3) reduce section size by redesign if possible.</p>
+          </div>
+          <div class="trap-alert">
+            <span class="trap-icon">⚠️</span>
+            <div><div class="ta-label">PE Trap Alert</div><div class="ta-text">When the same process fails on a larger diameter but worked on a smaller one, the variable is section size — and the root cause is the ideal critical diameter being exceeded. Don't chase quench temperature or austenitizing conditions when the only changed variable between successful and failed batches is section size.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- CASE 18 -->
+  <article class="case-card" data-category="fail" id="case18">
+    <div class="case-header" onclick="toggleCase('case18')">
+      <div class="case-number">18</div>
+      <div class="case-meta">
+        <div class="case-tags"><span class="tag tag-fail">Failure Analysis</span><span class="diff-dot diff-3"></span><span style="font-size:0.78rem;color:var(--text3)">Expert</span></div>
+        <div class="case-title">Fatigue Failure Below Endurance Limit — Surface Defect Role</div>
+        <div class="case-summary">A polished steel shaft (endurance limit Se = 380 MPa) fails in fatigue at an applied stress amplitude of 280 MPa — well below Se. Fracture origin is at the surface. Microscopy reveals a sharp undercut groove from machining at the failure location.</div>
+      </div>
+      <div class="case-chevron">▼</div>
+    </div>
+    <div class="case-body">
+      <div class="case-body-inner">
+        <div class="scenario-box">
+          <div class="box-label">Scenario</div>
+          <p>4340 steel rotating shaft. Se = 380 MPa (fully reversed, polished, unnotched specimen). Operating stress amplitude = 280 MPa. Fatigue failure at 3×10⁵ cycles (well below 10⁷ expected). Fracture origin at a machining groove (Kt ≈ 2.8) at a diameter transition. No surface corrosion.</p>
+        </div>
+        <div class="clues-box">
+          <div class="box-label">Engineering Clues</div>
+          <ul class="clue-list">
+            <li>Applied nominal stress (280 MPa) &lt; Se (380 MPa) — should not fatigue fail</li>
+            <li>Sharp stress concentrator (Kt = 2.8) at failure origin</li>
+            <li>Local stress at notch root = 280 × 2.8 = 784 MPa &gt; Se</li>
+            <li>Se is a specimen value — not accounting for stress concentration</li>
+          </ul>
+        </div>
+        <div class="question-section">
+          <div class="question-text">What is the primary cause of this sub-endurance limit fatigue failure?</div>
+          <ul class="options-list" id="q18-opts">
+            <li><button class="option-btn" data-q="q18" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">A</span>The endurance limit data was for a different heat treatment; the actual material Se is lower</button></li>
+            <li><button class="option-btn" data-q="q18" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">B</span>High-cycle fatigue from resonance — vibration amplitude was underestimated</button></li>
+            <li><button class="option-btn" data-q="q18" data-correct="true" onclick="selectOption(this)"><span class="opt-letter">C</span>Stress concentration factor raised local stress above Se at the notch; the component Se must account for Kf (notch sensitivity), not just nominal stress vs. specimen Se</button></li>
+            <li><button class="option-btn" data-q="q18" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">D</span>Surface residual tensile stresses from quenching elevated mean stress above the Goodman limit</button></li>
+          </ul>
+        </div>
+        <div class="reveal-panel" id="q18-reveal">
+          <div class="rationale-block">
+            <div class="box-label">Correct Answer — C: Stress Concentration Exceeds Local Se</div>
+            <p>Laboratory endurance limit (Se) is determined on polished, unnotched specimens under ideal conditions. In design, the actual fatigue strength must be reduced by: surface finish factor (ka), size factor (kb), reliability factor (kc), and — critically — the notch sensitivity factor (Kf = 1 + q(Kt − 1), where q is notch sensitivity). A machining groove with Kt = 2.8 and q = 0.95 yields Kf ≈ 2.72. Local stress amplitude = 280 × 2.72 = 762 MPa — far exceeding the material's Se. The nominal stress (280 MPa) appearing to be safely below Se is a classic design error: applying specimen Se to a notched component without accounting for stress concentration. Corrective actions: (1) eliminate the machining groove (smooth the transition), (2) apply shot peening to introduce compressive residual stress at the notch root, (3) redesign to reduce Kt &lt; 1.5 at transitions.</p>
+          </div>
+          <div class="key-clue-block">
+            <span class="key-clue-icon">🔑</span>
+            <div><div class="kc-label">Key Clue</div><div class="kc-text">Nominal stress below Se does NOT mean the component is safe. Se applies to the local stress at the failure site. Any stress concentration multiplies the nominal stress — and if local stress &gt; Se, fatigue failure will occur. The machining groove at the failure origin is the definitive clue that stress concentration is the mechanism.</div></div>
+          </div>
+          <div class="trap-alert">
+            <span class="trap-icon">⚠️</span>
+            <div><div class="ta-label">PE Trap Alert</div><div class="ta-text">Answer D is tempting if you know residual tensile stresses reduce fatigue life. But the problem statement places the origin at a sharp notch — not at a location associated with quench residual stresses. Stress concentration is the specific, location-matched explanation. Always trace failure to its origin site, then ask: what is special about that location?</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- CASE 19 -->
+  <article class="case-card" data-category="ht grain" id="case19">
+    <div class="case-header" onclick="toggleCase('case19')">
+      <div class="case-number">19</div>
+      <div class="case-meta">
+        <div class="case-tags"><span class="tag tag-ht">Heat Treatment</span><span class="tag tag-grain">Grain/Toughness</span><span class="diff-dot diff-2"></span><span style="font-size:0.78rem;color:var(--text3)">Intermediate</span></div>
+        <div class="case-title">Fatigue Performance Worsened After Overheating</div>
+        <div class="case-summary">A fatigue-critical aircraft bracket made from 4340 steel was accidentally austenitized at 980°C instead of 845°C. After quench and temper, hardness meets spec (48 HRC). But rotating bending fatigue tests show a 35% reduction in fatigue life. Why?</div>
+      </div>
+      <div class="case-chevron">▼</div>
+    </div>
+    <div class="case-body">
+      <div class="case-body-inner">
+        <div class="scenario-box">
+          <div class="box-label">Scenario</div>
+          <p>4340 bracket overheated to 980°C (vs. 845°C spec). Post-heat-treatment hardness: 48 HRC (meets spec). Microstructure: coarse prior austenite grains (ASTM #2 vs. #8 normal). Fatigue life: 1.8×10⁶ cycles vs. design target 2.8×10⁶. Fracture surface: intergranular component visible at fatigue initiation zone.</p>
+        </div>
+        <div class="clues-box">
+          <div class="box-label">Engineering Clues</div>
+          <ul class="clue-list">
+            <li>Overheating → coarse prior austenite grains (ASTM #2 vs #8)</li>
+            <li>Hardness meets spec — strength not the limiting factor</li>
+            <li>Fatigue life 35% below target</li>
+            <li>Intergranular component in fracture — grain boundary weakening</li>
+            <li>Coarse grains provide larger facets for fatigue crack initiation</li>
+          </ul>
+        </div>
+        <div class="question-section">
+          <div class="question-text">Which effect of overheating most directly explains the reduced fatigue life despite acceptable hardness?</div>
+          <ul class="options-list" id="q19-opts">
+            <li><button class="option-btn" data-q="q19" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">A</span>Carbide dissolution at 980°C created excessive retained austenite</button></li>
+            <li><button class="option-btn" data-q="q19" data-correct="true" onclick="selectOption(this)"><span class="opt-letter">B</span>Grain coarsening produced larger prior austenite grains, increasing fatigue crack initiation susceptibility and weakening grain boundaries</button></li>
+            <li><button class="option-btn" data-q="q19" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">C</span>Overheating caused surface decarburization, reducing surface carbon and hardness</button></li>
+            <li><button class="option-btn" data-q="q19" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">D</span>The Ms temperature increased, producing less martensite</button></li>
+          </ul>
+        </div>
+        <div class="reveal-panel" id="q19-reveal">
+          <div class="rationale-block">
+            <div class="box-label">Correct Answer — B: Grain Coarsening from Overheating</div>
+            <p>Austenite grain growth above ~950°C is rapid and exponential. The coarse prior austenite grains (ASTM #2 vs normal #8) that result from overheating persist through the martensitic transformation as coarse martensitic packets and lath packets. Coarse grains: (1) provide larger cleavage/intergranular facets for fatigue crack initiation (easier nucleation), (2) exhibit weaker grain boundaries (overheating allows impurity segregation to boundaries), (3) lower the effective fatigue limit by making crack initiation easier. Critically, this effect is invisible to hardness testing — hardness can meet specification while fatigue life is significantly compromised. This is a common aerospace failure scenario: dimensional and hardness acceptance tests pass, but the component is degraded for cyclic loading service.</p>
+          </div>
+          <div class="key-clue-block">
+            <span class="key-clue-icon">🔑</span>
+            <div><div class="kc-label">Key Clue</div><div class="kc-text">Hardness met spec + fatigue life reduced + coarse prior austenite grains + intergranular fracture component = grain coarsening from overheating is the root cause. Hardness is a bulk property; fatigue is a surface and grain-boundary-sensitive property. These can decouple when grain size changes.</div></div>
+          </div>
+          <div class="trap-alert">
+            <span class="trap-icon">⚠️</span>
+            <div><div class="ta-label">PE Trap Alert</div><div class="ta-text">Hardness is not a sufficient acceptance criterion for fatigue-critical components. Overheating can meet hardness spec while degrading fatigue performance through grain coarsening. Fatigue-critical parts require additional acceptance criteria: grain size measurement, surface finish verification, and proof testing.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- CASE 20 -->
+  <article class="case-card" data-category="ht hard" id="case20">
+    <div class="case-header" onclick="toggleCase('case20')">
+      <div class="case-number">20</div>
+      <div class="case-meta">
+        <div class="case-tags"><span class="tag tag-ht">Heat Treatment</span><span class="tag tag-hard">Hardenability</span><span class="diff-dot diff-3"></span><span style="font-size:0.78rem;color:var(--text3)">Expert</span></div>
+        <div class="case-title">Nitriding vs. Carburizing — Selection for Dimensional Precision</div>
+        <div class="case-summary">A precision gear (±0.005 mm tolerance post-treatment) requires surface hardness of ≥60 HRC for wear resistance and fatigue improvement. Post-treatment grinding is not feasible (complex geometry). Select the correct surface hardening process.</div>
+      </div>
+      <div class="case-chevron">▼</div>
+    </div>
+    <div class="case-body">
+      <div class="case-body-inner">
+        <div class="scenario-box">
+          <div class="box-label">Scenario</div>
+          <p>A precision broached gear (AISI 4140, pre-hardened to 30 HRC core) requires: surface hardness ≥60 HRC, case depth 0.2–0.3 mm, dimensional change &lt;0.005 mm after surface treatment, no post-treatment grinding (complex tooth geometry). Production volume is high.</p>
+        </div>
+        <div class="clues-box">
+          <div class="box-label">Engineering Clues</div>
+          <ul class="clue-list">
+            <li>Dimensional tolerance is extremely tight (±0.005 mm)</li>
+            <li>Post-treatment grinding is not possible — all distortion must occur in-process</li>
+            <li>Carburizing requires quench after carburizing — significant distortion risk</li>
+            <li>Nitriding is performed below Ac1 — no phase transformation, minimal distortion</li>
+            <li>Nitriding case hardness on 4140 can reach 65–70 HRC (very hard surface nitrides)</li>
+          </ul>
+        </div>
+        <div class="question-section">
+          <div class="question-text">Which surface hardening process is most appropriate for this application?</div>
+          <ul class="options-list" id="q20-opts">
+            <li><button class="option-btn" data-q="q20" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">A</span>Gas carburizing at 920°C followed by direct oil quench</button></li>
+            <li><button class="option-btn" data-q="q20" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">B</span>Induction hardening with precision current control</button></li>
+            <li><button class="option-btn" data-q="q20" data-correct="true" onclick="selectOption(this)"><span class="opt-letter">C</span>Gas nitriding or ion nitriding — performed below Ac1, minimal distortion, achieves high surface hardness without quench</button></li>
+            <li><button class="option-btn" data-q="q20" data-correct="false" onclick="selectOption(this)"><span class="opt-letter">D</span>Carbonitriding at 850°C followed by oil quench</button></li>
+          </ul>
+        </div>
+        <div class="reveal-panel" id="q20-reveal">
+          <div class="rationale-block">
+            <div class="box-label">Correct Answer — C: Gas or Ion Nitriding</div>
+            <p>Nitriding is performed at 480–580°C — well below the Ac1 transformation temperature for steel. Because the steel does not undergo a phase transformation, no quench is required, and dimensional distortion is minimal (typically &lt;0.002 mm). The nitrogen diffuses into the surface and reacts with alloying elements (Cr, Mo, Al in 4140) to form extremely hard, fine nitride precipitates — achieving surface hardness of 65–70 HRC on alloy steels like 4140. The case depth (0.2–0.3 mm typical for gas nitriding) and extreme surface hardness meet the specification. Carburizing (A and D) require a quench, which guarantees distortion beyond tolerance. Induction hardening (B) cannot achieve the required case depth uniformly on complex tooth geometry. Nitriding is purpose-built for precision, complex-geometry, dimensionally-critical components.</p>
+          </div>
+          <div class="concept-chain">
+            <div class="box-label">Concept Chain</div>
+            <div class="chain-flow">
+              <span class="chain-step">Precision required (±0.005 mm)</span><span class="chain-arrow">→</span>
+              <span class="chain-step">No quench allowed</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Must work below Ac1</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Nitriding (480–580°C)</span><span class="chain-arrow">→</span>
+              <span class="chain-step">Nitride precipitates on alloy steel</span><span class="chain-arrow">→</span>
+              <span class="chain-step">65–70 HRC, minimal distortion</span>
+            </div>
+          </div>
+          <div class="trap-alert">
+            <span class="trap-icon">⚠️</span>
+            <div><div class="ta-label">PE Trap Alert</div><div class="ta-text">Carbonitriding (D) is the most tempting wrong answer because it sounds similar to nitriding. However, carbonitriding is performed at 850°C (above Ac1) and requires a quench — making it incompatible with this precision application. The quench is the disqualifying requirement. Nitriding requires no quench; carbonitriding does.</div></div>
+          </div>
+          <div class="designers-lens">
+            <div class="box-label">Designer's Lens</div>
+            <p>This question tests the ability to work backward from a constraint (no distortion → no quench → must operate below Ac1) to the correct process, rather than forward from "what gives hardness?" The constraint-first reasoning path is the PE engineering judgment skill this case is designed to train.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  </div><!-- end casesContainer -->
+</main>
+
+<!-- SCORE TRACKER -->
+<div class="score-tracker" id="scoreTracker">
+  <div class="st-label">SESSION SCORE</div>
+  <div class="st-score" id="scoreDisplay">0 / 0</div>
+  <div class="st-bar"><div class="st-fill" id="scoreFill" style="width:0%"></div></div>
+  <div class="st-sub" id="scoreSubtext">No answers yet</div>
+</div>
+
+<footer>
+  <strong>PE Mechanical Heat Treatment &amp; Material Failure Deep Mastery Lab</strong><br>
+  Segment 2 · Case Studies &amp; Engineering Decisions · 20 Advanced Cases<br>
+  Designed and Curriculum Developed by <strong>Hilary Homaii</strong>
+</footer>
+
+<script>
+  // ── STATE ──
+  let totalAnswered = 0;
+  let totalCorrect = 0;
+  const answered = {};
+  const wrongAnswers = new Set();
+
+  // ── TOGGLE CASE ──
+  function toggleCase(id) {
+    const card = document.getElementById(id);
+    card.classList.toggle('open');
+  }
+
+  function expandAll() {
+    document.querySelectorAll('.case-card').forEach(c => c.classList.add('open'));
+  }
+
+  function collapseAll() {
+    document.querySelectorAll('.case-card').forEach(c => c.classList.remove('open'));
+  }
+
+  function showUnanswered() {
+    collapseAll();
+    document.querySelectorAll('.case-card').forEach(card => {
+      const qId = card.querySelector('[data-q]');
+      if (!qId) return;
+      const q = qId.getAttribute('data-q');
+      if (!answered[q]) {
+        card.classList.add('open');
+        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    });
+  }
+
+  function showWrong() {
+    collapseAll();
+    wrongAnswers.forEach(q => {
+      const btn = document.querySelector(`[data-q="${q}"]`);
+      if (btn) {
+        const card = btn.closest('.case-card');
+        if (card) { card.classList.add('open'); }
+      }
+    });
+  }
+
+  // ── ANSWER SELECTION ──
+  function selectOption(btn) {
+    const q = btn.getAttribute('data-q');
+    if (answered[q]) return;
+
+    answered[q] = true;
+    totalAnswered++;
+    const isCorrect = btn.getAttribute('data-correct') === 'true';
+    if (isCorrect) { totalCorrect++; }
+    else { wrongAnswers.add(q); }
+
+    // Style all options
+    const allOpts = document.querySelectorAll(`[data-q="${q}"]`);
+    allOpts.forEach(opt => {
+      opt.disabled = true;
+      if (opt.getAttribute('data-correct') === 'true') {
+        opt.classList.add('correct');
+      } else if (opt === btn && !isCorrect) {
+        opt.classList.add('wrong');
+      }
+    });
+
+    // Show reveal panel
+    const revealId = q + '-reveal';
+    const reveal = document.getElementById(revealId);
+    if (reveal) {
+      reveal.classList.add('visible');
+      setTimeout(() => {
+        reveal.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 150);
+    }
+
+    updateScore();
+  }
+
+  // ── SCORE UPDATE ──
+  function updateScore() {
+    document.getElementById('scoreDisplay').textContent = `${totalCorrect} / ${totalAnswered}`;
+    const pct = totalAnswered > 0 ? Math.round((totalCorrect / totalAnswered) * 100) : 0;
+    document.getElementById('scoreFill').style.width = pct + '%';
+
+    let sub = '';
+    if (totalAnswered === 0) sub = 'No answers yet';
+    else if (pct >= 90) sub = `${pct}% — Excellent!`;
+    else if (pct >= 70) sub = `${pct}% — Strong`;
+    else if (pct >= 50) sub = `${pct}% — Building`;
+    else sub = `${pct}% — Keep studying`;
+    document.getElementById('scoreSubtext').textContent = sub;
+  }
+
+  // ── FILTER ──
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const filter = btn.getAttribute('data-filter');
+      let count = 0;
+      document.querySelectorAll('.case-card').forEach(card => {
+        const cats = card.getAttribute('data-category') || '';
+        if (filter === 'all' || cats.includes(filter)) {
+          card.style.display = '';
+          count++;
+        } else {
+          card.style.display = 'none';
+          card.classList.remove('open');
+        }
+      });
+      document.getElementById('caseCount').textContent = `Showing ${count} case${count !== 1 ? 's' : ''}`;
+    });
+  });
+</script>
+</body>
+</html>
